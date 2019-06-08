@@ -21,10 +21,30 @@ import (
 	"log"
 	"net/http"
 	"os"
+	"time"
 
 	"github.com/line/line-bot-sdk-go/linebot"
 	"github.com/line/line-bot-sdk-go/linebot/httphandler"
 )
+
+// 天気配信ジョブ
+func sendWeatherInfo(c *linebot.Client, userId string) {
+	const layout = "15:04:05" // => hh:mm:ss
+
+	for {
+		t := time.Now()
+		if t.Format(layout) == "20:20:00" {
+			// メッセージ送信
+			_, err := c.PushMessage(userId, linebot.NewTextMessage("its true")).Do()
+			if err != nil {
+				log.Print(err)
+			}
+
+			// 連続送信を防止する
+			time.Sleep(1 * time.Second) // sleep 1 second
+		}
+	}
+}
 
 func main() {
 	const (
@@ -38,11 +58,13 @@ func main() {
 		log.Print(err)
 	}
 
-	// 天気
+	// サーバ起動確認
 	_, err = weather.PushMessage(userId, linebot.NewTextMessage("サーバ起動成功...")).Do()
 	if err != nil {
 		log.Print(err)
 	}
+
+	go sendWeatherInfo(weather, userId)
 
 	handler, err := httphandler.New(channelSecret, channelToken)
 	if err != nil {
@@ -60,7 +82,7 @@ func main() {
 		// 返信
 		for _, event := range events {
 			if event.Type == linebot.EventTypeMessage {
-				_, err := bot.ReplyMessage(event.ReplyToken, linebot.NewTextMessage("Hello")).Do()
+				_, err := bot.ReplyMessage(event.ReplyToken, linebot.NewTextMessage("hello")).Do()
 				if err != nil {
 					log.Print(err)
 				}
