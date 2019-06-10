@@ -22,20 +22,40 @@ import (
 	"net/http"
 	"os"
 	"time"
+	"weather"
 
 	"github.com/line/line-bot-sdk-go/linebot"
 	"github.com/line/line-bot-sdk-go/linebot/httphandler"
 )
 
+// 天気情報作成
+func createWeatherMessage() string {
+	// 今日の天気情報を取得
+	w := weather.New().GetInfoFromDate(time.Now())
+	dates := w.GetDates()
+	icons := w.GetIcons()
+	cityName := w.GetCityName()
+
+	// 天気情報メッセージ作成
+	message := cityName + "の天気情報です♪\n\n"
+	for i, date := range dates {
+		message = message +
+			date.Format("01月02日 15時04分") + "時点の天気は" +
+			w.ConvertIconToWord(icons[i]) + "でしょう。\n\n"
+	}
+
+	return message
+}
+
 // 天気配信ジョブ
 func sendWeatherInfo(c *linebot.Client, userId string) {
 	const layout = "15:04:05" // => hh:mm:ss
-
 	for {
 		t := time.Now()
-		if t.Format(layout) == "20:20:00" {
-			// メッセージ送信
-			_, err := c.PushMessage(userId, linebot.NewTextMessage("its true")).Do()
+		if t.Format(layout) == "16:40:00" {
+			// 天気情報メッセージ送信
+			message := createWeatherMessage()
+			_, err := c.PushMessage(userId, linebot.NewTextMessage(message)).Do()
 			if err != nil {
 				log.Print(err)
 			}
@@ -82,7 +102,7 @@ func main() {
 		// 返信
 		for _, event := range events {
 			if event.Type == linebot.EventTypeMessage {
-				_, err := bot.ReplyMessage(event.ReplyToken, linebot.NewTextMessage("hello")).Do()
+				_, err := bot.ReplyMessage(event.ReplyToken, linebot.NewTextMessage(createWeatherMessage())).Do()
 				if err != nil {
 					log.Print(err)
 				}
