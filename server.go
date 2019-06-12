@@ -17,16 +17,22 @@
 package main
 
 import (
-	"encoding/json"
 	"log"
 	"net/http"
-	"os"
 	"time"
 	"weather"
 
 	"github.com/line/line-bot-sdk-go/linebot"
 	"github.com/line/line-bot-sdk-go/linebot/httphandler"
+	"gopkg.in/mgo.v2"
 )
+
+type UserInfos struct {
+	UserID        string `json:"userId"`
+	DisplayName   string `json:"displayName"`
+	PictureURL    string `json:"pictureUrl"`
+	StatusMessage string `json:"statusMessage"`
+}
 
 // 天気情報作成
 func createWeatherMessage() string {
@@ -66,6 +72,28 @@ func sendWeatherInfo(c *linebot.Client, userId string) {
 	}
 }
 
+// mongoDB接続
+func connectDb() *mgo.Database {
+	session, err := mgo.Dial("mongodb://localhost/mongodb")
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	return session.DB("mongodb")
+}
+
+func disconnectDb(db *mgo.Database) {
+	db.Session.Close()
+}
+
+// mongoDB挿入
+func insertDb(obj interface{}, colectionName string) {
+	col := connectDb().C(colectionName)
+	if err := col.Insert(obj); err != nil {
+		log.Fatalln(err)
+	}
+}
+
 func main() {
 	const (
 		channelSecret = "f7c8a8c3df6f23c2549f3f1ed484dc47"
@@ -99,7 +127,7 @@ func main() {
 			return
 		}
 
-		// 返信
+		// イベント処理
 		for _, event := range events {
 			if event.Type == linebot.EventTypeMessage {
 				_, err := bot.ReplyMessage(event.ReplyToken, linebot.NewTextMessage(createWeatherMessage())).Do()
@@ -109,16 +137,16 @@ func main() {
 			} else if event.Type == linebot.EventTypeFollow {
 				// get userInfo
 				profile, err := bot.GetProfile(event.Source.UserID).Do()
+				userInfos := new(UserInfos)
+				userInfos.UserID = profile.UserID
+				userInfos.DisplayName = profile.DisplayName
+				userInfos.PictureURL = profile.PictureURL
+				userInfos.StatusMessage = profile.StatusMessage
 
-				// jsonファイルに書き込み
-				jsonBytes, err := json.Marshal(profile)
-				if err != nil {
-					log.Print(err)
-				}
-
-				jsonFile, err := os.OpenFile("./userInfos.json", os.O_RDWR|os.O_CREATE|os.O_APPEND, 0766)
-				jsonFile.Write(jsonBytes)
-				defer jsonFile.Close()
+				// ユーザ情報をDBに登録
+				db := connectDb()
+				defer disconnectDb(db)
+				insertDb(userInfos, "userInfos")
 
 				// フレンド登録時の挨拶
 				message := profile.DisplayName + "さん\nはじめまして、毎朝6時に天気情報を教えてあげるね"
@@ -127,10 +155,6 @@ func main() {
 				if err != nil {
 					log.Print(err)
 				}
-
-				log.Print("UserID: ", profile.UserID)
-				log.Print("DisplayName: ", profile.DisplayName)
-
 			}
 		}
 	})
