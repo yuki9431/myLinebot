@@ -159,9 +159,12 @@ func main() {
 		}
 	})
 	http.Handle("/callback", handler)
+	if err := http.ListenAndServeTLS(":8080", "server.crt", "server.key", nil); err != nil {
+		log.Fatal("ListenAndServe: ", err)
+	}
 	// This is just a sample code.
 	// For actually use, you must support HTTPS by using `ListenAndServeTLS`, reverse proxy or etc.
-	if err := http.ListenAndServe(":8080", nil); err != nil {
-		log.Fatal(err)
-	}
+	// if err := http.ListenAndServe(":8080", nil); err != nil {
+	// 	log.Fatal(err)
+	// }
 }
