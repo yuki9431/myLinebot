@@ -58,7 +58,7 @@ func sendWeatherInfo(c *linebot.Client, userId string) {
 	const layout = "15:04:05" // => hh:mm:ss
 	for {
 		t := time.Now()
-		if t.Format(layout) == "16:40:00" {
+		if t.Format(layout) == "06:00:00" {
 			// 天気情報メッセージ送信
 			message := createWeatherMessage()
 			_, err := c.PushMessage(userId, linebot.NewTextMessage(message)).Do()
@@ -159,12 +159,7 @@ func main() {
 		}
 	})
 	http.Handle("/callback", handler)
-	if err := http.ListenAndServeTLS(":8080", "server.crt", "server.key", nil); err != nil {
+	if err := http.ListenAndServeTLS(":443", "keys/fullchain.pem", "keys/privkey.pem", nil); err != nil {
 		log.Fatal("ListenAndServe: ", err)
 	}
-	// This is just a sample code.
-	// For actually use, you must support HTTPS by using `ListenAndServeTLS`, reverse proxy or etc.
-	// if err := http.ListenAndServe(":8080", nil); err != nil {
-	// 	log.Fatal(err)
-	// }
 }
