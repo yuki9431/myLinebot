@@ -19,9 +19,12 @@ package main
 import (
 	"log"
 	"net/http"
+	"os"
 	"time"
 	"weather"
 
+	"github.com/docopt/docopt-go"
+	"github.com/greymd/ojichat/generator"
 	"github.com/line/line-bot-sdk-go/linebot"
 	"github.com/line/line-bot-sdk-go/linebot/httphandler"
 	"gopkg.in/mgo.v2"
@@ -70,6 +73,28 @@ func sendWeatherInfo(c *linebot.Client, userId string) {
 			time.Sleep(1 * time.Second) // sleep 1 second
 		}
 	}
+}
+
+// ojichat実装
+func ojichat(name string) string {
+	parser := &docopt.Parser{
+		OptionsFirst: true,
+	}
+	args, _ := parser.ParseArgs("", nil, "")
+	config := generator.Config{}
+	config.TargetName = name
+	err := args.Bind(&config)
+	if err != nil {
+		log.Fatal(err)
+		os.Exit(1)
+	}
+
+	result, err := generator.Start(config)
+	if err != nil {
+		log.Fatal(err)
+		os.Exit(1)
+	}
+	return result
 }
 
 // mongoDB接続
@@ -129,19 +154,20 @@ func main() {
 
 		// イベント処理
 		for _, event := range events {
+			// get userInfo
+			profile, err := bot.GetProfile(event.Source.UserID).Do()
+			userInfos := new(UserInfos)
+			userInfos.UserID = profile.UserID
+			userInfos.DisplayName = profile.DisplayName
+			userInfos.PictureURL = profile.PictureURL
+			userInfos.StatusMessage = profile.StatusMessage
+
 			if event.Type == linebot.EventTypeMessage {
-				_, err := bot.ReplyMessage(event.ReplyToken, linebot.NewTextMessage(createWeatherMessage())).Do()
+				_, err := bot.ReplyMessage(event.ReplyToken, linebot.NewTextMessage(ojichat(userInfos.DisplayName))).Do()
 				if err != nil {
 					log.Print(err)
 				}
 			} else if event.Type == linebot.EventTypeFollow {
-				// get userInfo
-				profile, err := bot.GetProfile(event.Source.UserID).Do()
-				userInfos := new(UserInfos)
-				userInfos.UserID = profile.UserID
-				userInfos.DisplayName = profile.DisplayName
-				userInfos.PictureURL = profile.PictureURL
-				userInfos.StatusMessage = profile.StatusMessage
 
 				// ユーザ情報をDBに登録
 				db := connectDb()
