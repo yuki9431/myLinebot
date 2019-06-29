@@ -126,31 +126,27 @@ func main() {
 		userId        = "U0b00920127574259c8ac979e5f59f0ea"
 	)
 
-	weather, err := linebot.New(channelSecret, channelToken)
-	if err != nil {
-		log.Print(err)
-	}
-
-	// サーバ起動確認
-	_, err = weather.PushMessage(userId, linebot.NewTextMessage("サーバ起動成功...")).Do()
-	if err != nil {
-		log.Print(err)
-	}
-
-	go sendWeatherInfo(weather, userId)
-
 	handler, err := httphandler.New(channelSecret, channelToken)
 	if err != nil {
 		log.Fatal(err)
 	}
 
+	bot, err := handler.NewClient()
+	if err != nil {
+		log.Print(err)
+		return
+	}
+
+	// サーバ起動確認
+	_, err = bot.PushMessage(userId, linebot.NewTextMessage("サーバ起動成功...")).Do()
+	if err != nil {
+		log.Print(err)
+	}
+
+	go sendWeatherInfo(bot, userId)
+
 	// Setup HTTP Server for receiving requests from LINE platform
 	handler.HandleEvents(func(events []*linebot.Event, r *http.Request) {
-		bot, err := handler.NewClient()
-		if err != nil {
-			log.Print(err)
-			return
-		}
 
 		// イベント処理
 		for _, event := range events {
@@ -163,6 +159,11 @@ func main() {
 			userInfos.StatusMessage = profile.StatusMessage
 
 			if event.Type == linebot.EventTypeMessage {
+				// 天気情報をあげる
+				//message := event.Message
+
+				//if message == "天気"
+
 				_, err := bot.ReplyMessage(event.ReplyToken, linebot.NewTextMessage(ojichat(userInfos.DisplayName))).Do()
 				if err != nil {
 					log.Print(err)
@@ -177,7 +178,7 @@ func main() {
 				// フレンド登録時の挨拶
 				message := profile.DisplayName + "さん\nはじめまして、毎朝6時に天気情報を教えてあげるね"
 
-				_, err = weather.PushMessage(profile.UserID, linebot.NewTextMessage(message)).Do()
+				_, err = bot.PushMessage(profile.UserID, linebot.NewTextMessage(message)).Do()
 				if err != nil {
 					log.Print(err)
 				}
