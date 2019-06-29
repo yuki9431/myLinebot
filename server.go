@@ -30,6 +30,14 @@ import (
 	"gopkg.in/mgo.v2"
 )
 
+const (
+	channelSecret = "f7c8a8c3df6f23c2549f3f1ed484dc47"
+	channelToken  = "fmgf96KJrTdN7B/T2aS39L9XDycHqS86H0F09ekR/mtUadt+R3sY1eYba8R6h0ifJ3yqmATJq9117er8GtipA2LgN81xluam/udbmUoluWJeS2GQQyFSKsl9djd/yytyEh9Q/8un3gFIZJ/op1Dz+wdB04t89/1O/w1cDnyilFU="
+	userId        = "U0b00920127574259c8ac979e5f59f0ea"
+	appId         = "63ef79e871474934c1bd707239475660"
+	cityId        = "1850147" // Tokyo
+)
+
 type UserInfos struct {
 	UserID        string `json:"userId"`
 	DisplayName   string `json:"displayName"`
@@ -40,7 +48,7 @@ type UserInfos struct {
 // 天気情報作成
 func createWeatherMessage() string {
 	// 今日の天気情報を取得
-	w := weather.New().GetInfoFromDate(time.Now())
+	w := weather.New(cityId, appId).GetInfoFromDate(time.Now())
 	dates := w.GetDates()
 	icons := w.GetIcons()
 	cityName := w.GetCityName()
@@ -120,11 +128,6 @@ func insertDb(obj interface{}, colectionName string) {
 }
 
 func main() {
-	const (
-		channelSecret = "f7c8a8c3df6f23c2549f3f1ed484dc47"
-		channelToken  = "fmgf96KJrTdN7B/T2aS39L9XDycHqS86H0F09ekR/mtUadt+R3sY1eYba8R6h0ifJ3yqmATJq9117er8GtipA2LgN81xluam/udbmUoluWJeS2GQQyFSKsl9djd/yytyEh9Q/8un3gFIZJ/op1Dz+wdB04t89/1O/w1cDnyilFU="
-		userId        = "U0b00920127574259c8ac979e5f59f0ea"
-	)
 
 	handler, err := httphandler.New(channelSecret, channelToken)
 	if err != nil {
