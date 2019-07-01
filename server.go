@@ -33,7 +33,6 @@ import (
 const (
 	channelSecret = "f7c8a8c3df6f23c2549f3f1ed484dc47"
 	channelToken  = "fmgf96KJrTdN7B/T2aS39L9XDycHqS86H0F09ekR/mtUadt+R3sY1eYba8R6h0ifJ3yqmATJq9117er8GtipA2LgN81xluam/udbmUoluWJeS2GQQyFSKsl9djd/yytyEh9Q/8un3gFIZJ/op1Dz+wdB04t89/1O/w1cDnyilFU="
-	userId        = "U0b00920127574259c8ac979e5f59f0ea"
 	appId         = "63ef79e871474934c1bd707239475660"
 	cityId        = "1850147" // Tokyo
 )
@@ -127,7 +126,15 @@ func insertDb(obj interface{}, colectionName string) {
 	}
 }
 
+// mondoDB抽出
+func searchDb(colectionName string) *interface{} {
+	obj := new(interface{})
+	// TODO mongoDBの先頭から１件ずつ抽出したい
+	return obj
+}
+
 func main() {
+	userIds := [...]string{"U209df1bdf7d10c34ca5ad7bf88feb389", "U0b00920127574259c8ac979e5f59f0ea"}
 
 	handler, err := httphandler.New(channelSecret, channelToken)
 	if err != nil {
@@ -141,12 +148,21 @@ func main() {
 	}
 
 	// サーバ起動確認
-	_, err = bot.PushMessage(userId, linebot.NewTextMessage("サーバ起動成功...")).Do()
+	_, err = bot.PushMessage(userIds[1], linebot.NewTextMessage("サーバ起動成功...")).Do()
 	if err != nil {
 		log.Print(err)
 	}
 
-	go sendWeatherInfo(bot, userId)
+	for _, userId := range userIds {
+		_, err = bot.PushMessage(userId, linebot.NewTextMessage("ループ処理テスト...")).Do()
+		if err != nil {
+			log.Print(err)
+		}
+	}
+
+	for _, userId := range userIds {
+		go sendWeatherInfo(bot, userId)
+	}
 
 	// Setup HTTP Server for receiving requests from LINE platform
 	handler.HandleEvents(func(events []*linebot.Event, r *http.Request) {
