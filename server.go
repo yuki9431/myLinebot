@@ -127,9 +127,14 @@ func insertDb(obj interface{}, colectionName string) {
 }
 
 // mondoDB抽出
-func searchDb(colectionName string) *interface{} {
-	obj := new(interface{})
-	// TODO mongoDBの先頭から１件ずつ抽出したい
+func searchDb(colectionName string) interface{} {
+	var obj interface{}
+
+	col := connectDb().C(colectionName)
+	if err := col.Find(nil).All(&obj); err != nil {
+		log.Fatal(err)
+	}
+
 	return obj
 }
 
@@ -153,12 +158,20 @@ func main() {
 		log.Print(err)
 	}
 
-	for _, userId := range userIds {
-		_, err = bot.PushMessage(userId, linebot.NewTextMessage("ループ処理テスト...")).Do()
-		if err != nil {
-			log.Print(err)
+	// DBからユーザ情報を取得
+	userinfos := searchDb("userInfos")
+	if value, ok := userinfos.([]UserInfos); ok {
+		for _, userinfo := range value {
+			log.Println(userinfo.DisplayName)
 		}
 	}
+
+	// for _, userId := range userIds {
+	// 	_, err = bot.PushMessage(userId, linebot.NewTextMessage("DB抽出テスト...")).Do()
+	// 	if err != nil {
+	// 		log.Print(err)
+	// 	}
+	// }
 
 	for _, userId := range userIds {
 		go sendWeatherInfo(bot, userId)
