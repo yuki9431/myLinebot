@@ -36,6 +36,8 @@ const (
 	channelToken  = "fmgf96KJrTdN7B/T2aS39L9XDycHqS86H0F09ekR/mtUadt+R3sY1eYba8R6h0ifJ3yqmATJq9117er8GtipA2LgN81xluam/udbmUoluWJeS2GQQyFSKsl9djd/yytyEh9Q/8un3gFIZJ/op1Dz+wdB04t89/1O/w1cDnyilFU="
 	appId         = "63ef79e871474934c1bd707239475660"
 	cityId        = "1850147" // Tokyo
+	certFile      = "/etc/letsencrypt/live/blacksnowpi.f5.si-0001/fullchain.pem"
+	keyFile       = "/etc/letsencrypt/live/blacksnowpi.f5.si-0001/privkey.pem"
 )
 
 type UserInfos struct {
@@ -200,7 +202,7 @@ func main() {
 		}
 	})
 	http.Handle("/callback", handler)
-	if err := http.ListenAndServeTLS(":443", "keys/fullchain.pem", "keys/privkey.pem", nil); err != nil {
+	if err := http.ListenAndServeTLS(":443", certFile, keyFile, nil); err != nil {
 		log.Fatal("ListenAndServe: ", err)
 	}
 }
