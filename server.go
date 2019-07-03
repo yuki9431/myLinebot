@@ -31,6 +31,7 @@ import (
 )
 
 const (
+	// TODO プロパティファイルに外だし
 	channelSecret = "f7c8a8c3df6f23c2549f3f1ed484dc47"
 	channelToken  = "fmgf96KJrTdN7B/T2aS39L9XDycHqS86H0F09ekR/mtUadt+R3sY1eYba8R6h0ifJ3yqmATJq9117er8GtipA2LgN81xluam/udbmUoluWJeS2GQQyFSKsl9djd/yytyEh9Q/8un3gFIZJ/op1Dz+wdB04t89/1O/w1cDnyilFU="
 	appId         = "63ef79e871474934c1bd707239475660"
@@ -53,7 +54,8 @@ func createWeatherMessage() string {
 	cityName := w.GetCityName()
 
 	// 天気情報メッセージ作成
-	message := cityName + "の天気情報です♪\n\n"
+	message := "TODO:\n降水確率追加\n天気アイコン追加\nフォーマットを見やすく\n\n" +
+		cityName + "の天気情報です♪\n\n"
 	for i, date := range dates {
 		message = message +
 			date.Format("01月02日 15時04分") + "時点の天気は" +
@@ -64,16 +66,25 @@ func createWeatherMessage() string {
 }
 
 // 天気配信ジョブ
-func sendWeatherInfo(c *linebot.Client, userId string) {
+func sendWeatherInfo(c *linebot.Client) {
 	const layout = "15:04:05" // => hh:mm:ss
 	for {
 		t := time.Now()
 		if t.Format(layout) == "06:00:00" {
-			// 天気情報メッセージ送信
-			message := createWeatherMessage()
-			_, err := c.PushMessage(userId, linebot.NewTextMessage(message)).Do()
-			if err != nil {
-				log.Print(err)
+			// DBからユーザ情報を取得
+			var userinfos []UserInfos
+			searchDb(&userinfos, "userInfos")
+
+			// 抽出した全ユーザ情報に天気情報を配信
+			for _, userinfo := range userinfos {
+
+				// 天気情報メッセージ送信
+				message := createWeatherMessage()
+
+				_, err := c.PushMessage(userinfo.UserID, linebot.NewTextMessage(message)).Do()
+				if err != nil {
+					log.Print(err)
+				}
 			}
 
 			// 連続送信を防止する
@@ -127,20 +138,14 @@ func insertDb(obj interface{}, colectionName string) {
 }
 
 // mondoDB抽出
-func searchDb(colectionName string) interface{} {
-	var obj interface{}
-
+func searchDb(obj interface{}, colectionName string) {
 	col := connectDb().C(colectionName)
-	if err := col.Find(nil).All(&obj); err != nil {
+	if err := col.Find(nil).All(obj); err != nil {
 		log.Fatal(err)
 	}
-
-	return obj
 }
 
 func main() {
-	userIds := [...]string{"U209df1bdf7d10c34ca5ad7bf88feb389", "U0b00920127574259c8ac979e5f59f0ea"}
-
 	handler, err := httphandler.New(channelSecret, channelToken)
 	if err != nil {
 		log.Fatal(err)
@@ -152,30 +157,7 @@ func main() {
 		return
 	}
 
-	// サーバ起動確認
-	_, err = bot.PushMessage(userIds[1], linebot.NewTextMessage("サーバ起動成功...")).Do()
-	if err != nil {
-		log.Print(err)
-	}
-
-	// DBからユーザ情報を取得
-	userinfos := searchDb("userInfos")
-	if value, ok := userinfos.([]UserInfos); ok {
-		for _, userinfo := range value {
-			log.Println(userinfo.DisplayName)
-		}
-	}
-
-	// for _, userId := range userIds {
-	// 	_, err = bot.PushMessage(userId, linebot.NewTextMessage("DB抽出テスト...")).Do()
-	// 	if err != nil {
-	// 		log.Print(err)
-	// 	}
-	// }
-
-	for _, userId := range userIds {
-		go sendWeatherInfo(bot, userId)
-	}
+	go sendWeatherInfo(bot)
 
 	// Setup HTTP Server for receiving requests from LINE platform
 	handler.HandleEvents(func(events []*linebot.Event, r *http.Request) {
