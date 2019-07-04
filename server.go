@@ -70,11 +70,11 @@ func createWeatherMessage() string {
 // 天気配信ジョブ
 func sendWeatherInfo(c *linebot.Client) {
 	const layout = "15:04:05" // => hh:mm:ss
+	var userinfos []UserInfos
 	for {
 		t := time.Now()
 		if t.Format(layout) == "06:00:00" {
 			// DBからユーザ情報を取得
-			var userinfos []UserInfos
 			searchDb(&userinfos, "userInfos")
 
 			// 抽出した全ユーザ情報に天気情報を配信
@@ -168,11 +168,6 @@ func main() {
 		for _, event := range events {
 			// get userInfo
 			profile, err := bot.GetProfile(event.Source.UserID).Do()
-			userInfos := new(UserInfos)
-			userInfos.UserID = profile.UserID
-			userInfos.DisplayName = profile.DisplayName
-			userInfos.PictureURL = profile.PictureURL
-			userInfos.StatusMessage = profile.StatusMessage
 
 			if event.Type == linebot.EventTypeMessage {
 				// 天気情報をあげる
@@ -180,7 +175,7 @@ func main() {
 
 				//if message == "天気"
 
-				_, err := bot.ReplyMessage(event.ReplyToken, linebot.NewTextMessage(ojichat(userInfos.DisplayName))).Do()
+				_, err := bot.ReplyMessage(event.ReplyToken, linebot.NewTextMessage(ojichat(profile.DisplayName))).Do()
 				if err != nil {
 					log.Print(err)
 				}
@@ -189,7 +184,7 @@ func main() {
 				// ユーザ情報をDBに登録
 				db := connectDb()
 				defer disconnectDb(db)
-				insertDb(userInfos, "userInfos")
+				insertDb(profile, "userInfos")
 
 				// フレンド登録時の挨拶
 				message := profile.DisplayName + "さん\nはじめまして、毎朝6時に天気情報を教えてあげるね"
