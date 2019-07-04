@@ -20,6 +20,7 @@ import (
 	"log"
 	"net/http"
 	"os"
+	"strings"
 	"time"
 	"weather"
 
@@ -68,9 +69,10 @@ func createWeatherMessage() string {
 }
 
 // 天気配信ジョブ
-func sendWeatherInfo(c *linebot.Client) {
+func sendWeatherInfo() {
 	const layout = "15:04:05" // => hh:mm:ss
 	var userinfos []UserInfos
+	var c linebot.Client
 	for {
 		t := time.Now()
 		if t.Format(layout) == "06:00:00" {
@@ -105,13 +107,13 @@ func ojichat(name string) string {
 	config.TargetName = name
 	err := args.Bind(&config)
 	if err != nil {
-		log.Fatal(err)
+		log.Print(err)
 		os.Exit(1)
 	}
 
 	result, err := generator.Start(config)
 	if err != nil {
-		log.Fatal(err)
+		log.Print(err)
 		os.Exit(1)
 	}
 	return result
@@ -135,7 +137,7 @@ func disconnectDb(db *mgo.Database) {
 func insertDb(obj interface{}, colectionName string) {
 	col := connectDb().C(colectionName)
 	if err := col.Insert(obj); err != nil {
-		log.Fatalln(err)
+		log.Fatal(err)
 	}
 }
 
@@ -148,39 +150,53 @@ func searchDb(obj interface{}, colectionName string) {
 }
 
 func main() {
+
+	// 指定時間に天気情報を配信
+	go sendWeatherInfo()
+
 	handler, err := httphandler.New(channelSecret, channelToken)
 	if err != nil {
 		log.Fatal(err)
 	}
 
-	bot, err := handler.NewClient()
-	if err != nil {
-		log.Print(err)
-		return
-	}
-
-	go sendWeatherInfo(bot)
-
 	// Setup HTTP Server for receiving requests from LINE platform
 	handler.HandleEvents(func(events []*linebot.Event, r *http.Request) {
+		bot, err := handler.NewClient()
+		if err != nil {
+			log.Fatal(err)
+			return
+		}
 
 		// イベント処理
 		for _, event := range events {
 			// get userInfo
-			profile, err := bot.GetProfile(event.Source.UserID).Do()
+			var profile *linebot.UserProfileResponse
+			if profile, err = bot.GetProfile(event.Source.UserID).Do(); err != nil {
+				log.Print("err:ユーザの情報取得失敗")
+				return
+			}
 
 			if event.Type == linebot.EventTypeMessage {
-				// 天気情報をあげる
-				//message := event.Message
+				// 返信メッセージ
+				var replyMessage string
 
-				//if message == "天気"
+				switch message := event.Message.(type) {
+				case *linebot.TextMessage:
+					if strings.Contains(message.Text, "天気") {
+						replyMessage = createWeatherMessage()
+					} else if strings.Contains(message.Text, "ヘルプ") {
+						replyMessage = "TODO 機能説明"
+					} else {
+						replyMessage = ojichat(profile.DisplayName)
+					}
 
-				_, err := bot.ReplyMessage(event.ReplyToken, linebot.NewTextMessage(ojichat(profile.DisplayName))).Do()
-				if err != nil {
-					log.Print(err)
+					// 返信処理
+					_, err := bot.ReplyMessage(event.ReplyToken, linebot.NewTextMessage(replyMessage)).Do()
+					if err != nil {
+						log.Print(err)
+					}
 				}
 			} else if event.Type == linebot.EventTypeFollow {
-
 				// ユーザ情報をDBに登録
 				db := connectDb()
 				defer disconnectDb(db)
@@ -193,6 +209,8 @@ func main() {
 				if err != nil {
 					log.Print(err)
 				}
+			} else if event.Type == linebot.EventTypeUnfollow {
+				// DBから削除する処理
 			}
 		}
 	})
