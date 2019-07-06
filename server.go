@@ -1,19 +1,3 @@
-// Copyright 2016 LINE Corporation
-//
-// LINE Corporation licenses this file to you under the Apache License,
-// version 2.0 (the "License"); you may not use this file except in compliance
-// with the License. You may obtain a copy of the License at:
-//
-//   http://www.apache.org/licenses/LICENSE-2.0
-//
-// Unless required by applicable law or agreed to in writing, software
-// distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
-// WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the
-// License for the specific language governing permissions and limitations
-// under the License.
-
-// +build !appengine
-
 package main
 
 import (
@@ -31,16 +15,9 @@ import (
 	"gopkg.in/mgo.v2"
 )
 
-const (
-	// TODO プロパティファイルに外だし
-	channelSecret = "f7c8a8c3df6f23c2549f3f1ed484dc47"
-	channelToken  = "fmgf96KJrTdN7B/T2aS39L9XDycHqS86H0F09ekR/mtUadt+R3sY1eYba8R6h0ifJ3yqmATJq9117er8GtipA2LgN81xluam/udbmUoluWJeS2GQQyFSKsl9djd/yytyEh9Q/8un3gFIZJ/op1Dz+wdB04t89/1O/w1cDnyilFU="
-	appId         = "63ef79e871474934c1bd707239475660"
-	cityId        = "1850147" // Tokyo
-	certFile      = "/etc/letsencrypt/live/blacksnowpi.f5.si-0001/fullchain.pem"
-	keyFile       = "/etc/letsencrypt/live/blacksnowpi.f5.si-0001/privkey.pem"
-)
+const configFile = "config.json"
 
+// 構造体定義
 type UserInfos struct {
 	UserID        string `json:"userId"`
 	DisplayName   string `json:"displayName"`
@@ -48,8 +25,27 @@ type UserInfos struct {
 	StatusMessage string `json:"statusMessage"`
 }
 
+// 構造体定義
+type Config struct {
+	ChannelSecret string `json:"channelSecret"`
+	ChannelToken  string `json:"channelToken"`
+	AppId         string `json:"appId"`
+	CityId        string `json:"cityId"`
+	CertFile      string `json:"certFile"`
+	KeyFile       string `json:"keyFile"`
+}
+
 // 天気情報作成
 func createWeatherMessage() string {
+	// 設定ファイル読み込み
+	config := new(Config)
+	if err := Read(config, configFile); err != nil {
+		log.Fatal(err)
+	}
+
+	cityId := config.CityId
+	appId := config.AppId
+
 	// 今日の天気情報を取得
 	w := weather.New(cityId, appId).GetInfoFromDate(time.Now())
 	dates := w.GetDates()
@@ -150,11 +146,16 @@ func searchDb(obj interface{}, colectionName string) {
 }
 
 func main() {
+	// 設定ファイル読み込み
+	config := new(Config)
+	if err := Read(config, configFile); err != nil {
+		log.Fatal(err)
+	}
 
 	// 指定時間に天気情報を配信
 	go sendWeatherInfo()
 
-	handler, err := httphandler.New(channelSecret, channelToken)
+	handler, err := httphandler.New(config.ChannelSecret, config.ChannelToken)
 	if err != nil {
 		log.Fatal(err)
 	}
@@ -215,7 +216,7 @@ func main() {
 		}
 	})
 	http.Handle("/callback", handler)
-	if err := http.ListenAndServeTLS(":443", certFile, keyFile, nil); err != nil {
+	if err := http.ListenAndServeTLS(":443", config.CertFile, config.KeyFile, nil); err != nil {
 		log.Fatal("ListenAndServe: ", err)
 	}
 }
