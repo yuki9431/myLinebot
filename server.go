@@ -63,7 +63,7 @@ func createWeatherMessage() string {
 		}()
 
 	for _, icon := range icons {
-		message = message + icon + "    "
+		message = message + w.ConvertIconToWord(icon) + "    "
 	}
 
 	return message
