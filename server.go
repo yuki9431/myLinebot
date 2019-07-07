@@ -53,12 +53,17 @@ func createWeatherMessage() string {
 	cityName := w.GetCityName()
 
 	// 天気情報メッセージ作成
-	message := "TODO:\n降水確率追加\n天気アイコン追加\nフォーマットを見やすく\n\n" +
-		cityName + "の天気情報です♪\n\n"
-	for i, date := range dates {
-		message = message +
-			date.Format("01月02日 15時04分") + "時点の天気は" +
-			w.ConvertIconToWord(icons[i]) + "でしょう。\n\n"
+	message := cityName + "\n" +
+		func() string {
+			var times string
+			for _, time := range dates {
+				times = times + " " + time.Format("15時")
+			}
+			return times
+		}()
+
+	for _, icon := range icons {
+		message = message + icon + "    "
 	}
 
 	return message
