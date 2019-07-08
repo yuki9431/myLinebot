@@ -51,20 +51,23 @@ func createWeatherMessage() string {
 	dates := w.GetDates()
 	icons := w.GetIcons()
 	cityName := w.GetCityName()
+	descriptions := w.GetDescriptions()
 
 	// 天気情報メッセージ作成
 	message := cityName + "\n" +
 		func() string {
-			var times string
-			for _, time := range dates {
-				times = times + " " + time.Format("15時")
+			var tempIcon string
+			for i, time := range dates {
+				tempIcon += time.Format("15:04") + " " +
+					w.ConvertIconToWord(icons[i]) + " " +
+					descriptions[i] + "\n"
 			}
-			return times
-		}()
 
-	for _, icon := range icons {
-		message = message + w.ConvertIconToWord(icon) + "    "
-	}
+			wdays := [...]string{"日", "月", "火", "水", "木", "金", "土"}
+
+			return dates[0].Format("01/02 (") + wdays[dates[0].Weekday()] + ")" +
+				"の天気情報です" + "\n" + tempIcon
+		}()
 
 	return message
 }
@@ -190,10 +193,13 @@ func main() {
 				case *linebot.TextMessage:
 					if strings.Contains(message.Text, "天気") {
 						replyMessage = createWeatherMessage()
-					} else if strings.Contains(message.Text, "ヘルプ") {
-						replyMessage = "TODO 機能説明"
-					} else {
+					} else if strings.Contains(message.Text, "おじさん") {
 						replyMessage = ojichat(profile.DisplayName)
+					} else {
+						replyMessage = "TODO 機能説明" + "\n" +
+							"天気: 当日の天気情報を取得\n" +
+							"おじさん: おじさん？に呼びかける\n" +
+							"github:\nhttps://github.com/yuki9431/myLinebot"
 					}
 
 					// 返信処理
@@ -224,4 +230,8 @@ func main() {
 	if err := http.ListenAndServeTLS(":443", config.CertFile, config.KeyFile, nil); err != nil {
 		log.Fatal("ListenAndServe: ", err)
 	}
+
+	// if err := http.ListenAndServe(":8080", nil); err != nil {
+	// 	log.Fatal(err)
+	// }
 }

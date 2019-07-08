@@ -15,7 +15,7 @@ func Read(obj interface{}, filename string) error {
 	}
 
 	// 設定
-	err = json.Unmarshal(jsonString, obj)
+	err = json.Unmarshal(jsonString, &obj)
 	if err != nil {
 		return err
 	}

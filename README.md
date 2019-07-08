@@ -7,7 +7,7 @@ Cafe com Leite
 
 ## Description
 - 毎朝6時に天気情報配信
-- 返信イベントはojichat搭載
+- 返信イベントは[ojichat](https://github.com/greymd/ojichat)搭載
 
 ## Requirement
 - Go 1.10 or later
