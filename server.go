@@ -18,7 +18,7 @@ import (
 
 const configFile = "config.json"
 
-// 構造体定義
+// ユーザプロフィール情報
 type UserInfos struct {
 	UserID        string `json:"userId"`
 	DisplayName   string `json:"displayName"`
@@ -26,7 +26,7 @@ type UserInfos struct {
 	StatusMessage string `json:"statusMessage"`
 }
 
-// 構造体定義
+// API等の設定
 type Config struct {
 	ChannelSecret string `json:"channelSecret"`
 	ChannelToken  string `json:"channelToken"`
@@ -140,7 +140,9 @@ func disconnectDb(db *mgo.Database) {
 
 // mongoDB挿入
 func insertDb(obj interface{}, colectionName string) {
-	col := connectDb().C(colectionName)
+	db := connectDb()
+	defer disconnectDb(db)
+	col := db.C(colectionName)
 	if err := col.Insert(obj); err != nil {
 		log.Fatal(err)
 	}
@@ -148,8 +150,10 @@ func insertDb(obj interface{}, colectionName string) {
 
 // mongoDB削除
 func removeDb(obj interface{}, colectionName string) {
-	col := connectDb().C(colectionName)
-	if err := col.Remove(obj); err != nil {
+	db := connectDb()
+	defer disconnectDb(db)
+	col := db.C(colectionName)
+	if _, err := col.RemoveAll(obj); err != nil {
 		log.Println(err)
 	}
 }
@@ -187,53 +191,58 @@ func main() {
 
 		// イベント処理
 		for _, event := range events {
-			// get userInfo
-			var profile *linebot.UserProfileResponse
-			if profile, err = bot.GetProfile(event.Source.UserID).Do(); err != nil {
-				log.Print("err:ユーザの情報取得失敗")
-				return
-			}
+			log.Print("start event : " + event.Type + "\n")
 
-			if event.Type == linebot.EventTypeMessage {
-				// 返信メッセージ
-				var replyMessage string
+			// ユーザのIDを取得
+			userId := event.Source.UserID
 
-				switch message := event.Message.(type) {
-				case *linebot.TextMessage:
-					if strings.Contains(message.Text, "天気") {
-						replyMessage = createWeatherMessage()
-					} else if strings.Contains(message.Text, "おじさん") {
-						replyMessage = ojichat(profile.DisplayName)
-					} else {
-						replyMessage = "TODO 機能説明" + "\n" +
-							"天気: 当日の天気情報を取得\n" +
-							"おじさん: おじさん？に呼びかける\n" +
-							"github:\nhttps://github.com/yuki9431/myLinebot"
+			// ユーザのプロフィールを取得後、レスポンスする
+			if profile, err := bot.GetProfile(userId).Do(); err == nil {
+				if event.Type == linebot.EventTypeMessage {
+					// 返信メッセージ
+					var replyMessage string
+
+					switch message := event.Message.(type) {
+					case *linebot.TextMessage:
+						if strings.Contains(message.Text, "天気") {
+							replyMessage = createWeatherMessage()
+
+						} else if strings.Contains(message.Text, "おじさん") {
+							replyMessage = ojichat(profile.DisplayName)
+
+						} else {
+							replyMessage = "天気　　: 当日の天気情報を取得\n" +
+								"おじさん: おじさん？に呼びかける\n\n" +
+								"github:\nhttps://github.com/yuki9431/myLinebot"
+						}
+
+						// 返信処理
+						_, err := bot.ReplyMessage(event.ReplyToken, linebot.NewTextMessage(replyMessage)).Do()
+						if err != nil {
+							log.Print(err)
+						}
 					}
+				} else if event.Type == linebot.EventTypeFollow {
+					// ユーザ情報をDBに登録
+					insertDb(profile, "userInfos")
 
-					// 返信処理
-					_, err := bot.ReplyMessage(event.ReplyToken, linebot.NewTextMessage(replyMessage)).Do()
+					// フレンド登録時の挨拶
+					replyMessage := profile.DisplayName + "さん\nはじめまして、毎朝6時に天気情報を教えてあげるね"
+
+					_, err = bot.PushMessage(userId, linebot.NewTextMessage(replyMessage)).Do()
 					if err != nil {
 						log.Print(err)
 					}
 				}
-			} else if event.Type == linebot.EventTypeFollow {
-				// ユーザ情報をDBに登録
-				db := connectDb()
-				defer disconnectDb(db)
-				insertDb(profile, "userInfos")
-
-				// フレンド登録時の挨拶
-				message := profile.DisplayName + "さん\nはじめまして、毎朝6時に天気情報を教えてあげるね"
-
-				_, err = bot.PushMessage(profile.UserID, linebot.NewTextMessage(message)).Do()
-				if err != nil {
-					log.Print(err)
-				}
-			} else if event.Type == linebot.EventTypeUnfollow {
-				// DBから削除する処理
-				removeDb(bson.M{"userId": profile.UserID}, "userInfos")
 			}
+
+			// ブロック時の処理、ユーザ情報をDBから削除する
+			if event.Type == linebot.EventTypeUnfollow {
+				query := bson.M{"userid": userId}
+				removeDb(query, "userInfos")
+			}
+
+			log.Println("end event")
 		}
 	})
 	http.Handle("/callback", handler)
