@@ -9,6 +9,7 @@ import (
 	"weather"
 
 	"github.com/docopt/docopt-go"
+	"github.com/globalsign/mgo/bson"
 	"github.com/greymd/ojichat/generator"
 	"github.com/line/line-bot-sdk-go/linebot"
 	"github.com/line/line-bot-sdk-go/linebot/httphandler"
@@ -145,6 +146,14 @@ func insertDb(obj interface{}, colectionName string) {
 	}
 }
 
+// mongoDB削除
+func removeDb(obj interface{}, colectionName string) {
+	col := connectDb().C(colectionName)
+	if err := col.Remove(obj); err != nil {
+		log.Println(err)
+	}
+}
+
 // mondoDB抽出
 func searchDb(obj interface{}, colectionName string) {
 	col := connectDb().C(colectionName)
@@ -223,6 +232,7 @@ func main() {
 				}
 			} else if event.Type == linebot.EventTypeUnfollow {
 				// DBから削除する処理
+				removeDb(bson.M{"userId": profile.UserID}, "userInfos")
 			}
 		}
 	})

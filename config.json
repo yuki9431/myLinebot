@@ -1,0 +1,8 @@
+{
+"channelSecret": "f7c8a8c3df6f23c2549f3f1ed484dc47",
+"channelToken": "fmgf96KJrTdN7B/T2aS39L9XDycHqS86H0F09ekR/mtUadt+R3sY1eYba8R6h0ifJ3yqmATJq9117er8GtipA2LgN81xluam/udbmUoluWJeS2GQQyFSKsl9djd/yytyEh9Q/8un3gFIZJ/op1Dz+wdB04t89/1O/w1cDnyilFU=",
+"cityId": "1850147",
+"appId": "63ef79e871474934c1bd707239475660",
+"certFile": "/etc/letsencrypt/live/blacksnowpi.f5.si-0001/fullchain.pem",
+"keyFile" : "/etc/letsencrypt/live/blacksnowpi.f5.si-0001/privkey.pem"
+}
