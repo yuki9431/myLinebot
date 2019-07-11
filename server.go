@@ -18,6 +18,16 @@ import (
 
 const configFile = "config.json"
 
+const usage = `機能説明
+天気　　 : 本日の天気情報を取得
+おじさん : オジさん？に呼びかける
+
+comming soon...
+都市変更 : 天気情報取得の所在地を変更する
+時間変更 : 毎日の天気配信時刻を変更する
+
+https://github.com/yuki9431/myLinebot`
+
 // ユーザプロフィール情報
 type UserInfos struct {
 	UserID        string `json:"userId"`
@@ -67,7 +77,7 @@ func createWeatherMessage() string {
 			wdays := [...]string{"日", "月", "火", "水", "木", "金", "土"}
 
 			return dates[0].Format("01/02 (") + wdays[dates[0].Weekday()] + ")" +
-				"の天気情報です" + "\n" + tempIcon
+				"の天気情報だよ" + "\n" + tempIcon
 		}()
 
 	return message
@@ -211,9 +221,7 @@ func main() {
 							replyMessage = ojichat(profile.DisplayName)
 
 						} else {
-							replyMessage = "天気　　: 当日の天気情報を取得\n" +
-								"おじさん: おじさん？に呼びかける\n\n" +
-								"github:\nhttps://github.com/yuki9431/myLinebot"
+							replyMessage = usage
 						}
 
 						// 返信処理
