@@ -86,16 +86,16 @@ func createWeatherMessage() string {
 // 天気配信ジョブ
 func sendWeatherInfo() {
 	const layout = "15:04:05" // => hh:mm:ss
-	var userinfos []UserInfos
+	userinfos := new([]UserInfos)
 	var c linebot.Client
 	for {
 		t := time.Now()
 		if t.Format(layout) == "06:00:00" {
 			// DBからユーザ情報を取得
-			searchDb(&userinfos, "userInfos")
+			searchDb(userinfos, "userInfos")
 
 			// 抽出した全ユーザ情報に天気情報を配信
-			for _, userinfo := range userinfos {
+			for _, userinfo := range *userinfos {
 
 				// 天気情報メッセージ送信
 				message := createWeatherMessage()
@@ -170,7 +170,9 @@ func removeDb(obj interface{}, colectionName string) {
 
 // mondoDB抽出
 func searchDb(obj interface{}, colectionName string) {
-	col := connectDb().C(colectionName)
+	db := connectDb()
+	defer disconnectDb(db)
+	col := db.C(colectionName)
 	if err := col.Find(nil).All(obj); err != nil {
 		log.Fatal(err)
 	}
@@ -231,6 +233,8 @@ func main() {
 						}
 					}
 				} else if event.Type == linebot.EventTypeFollow {
+					// TODO insert前に存在の確認
+
 					// ユーザ情報をDBに登録
 					insertDb(profile, "userInfos")
 
