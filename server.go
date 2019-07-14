@@ -1,7 +1,9 @@
 package main
 
 import (
+	"errors"
 	"log"
+	"logger"
 	"net/http"
 	"os"
 	"strings"
@@ -16,9 +18,11 @@ import (
 	"gopkg.in/mgo.v2"
 )
 
-const configFile = "config.json"
-
-const usage = `機能説明
+const (
+	logfile       = "/var/log/linebot.log"
+	configFile    = "config.json"
+	followMessage = "さん\nはじめまして、毎朝6時に天気情報を教えてあげるね"
+	usage         = `機能説明
 天気　　 : 本日の天気情報を取得
 おじさん : オジさん？に呼びかける
 
@@ -27,6 +31,7 @@ comming soon...
 時間変更 : 毎日の天気配信時刻を変更する
 
 https://github.com/yuki9431/myLinebot`
+)
 
 // ユーザプロフィール情報
 type UserInfos struct {
@@ -34,10 +39,11 @@ type UserInfos struct {
 	DisplayName   string `json:"displayName"`
 	PictureURL    string `json:"pictureUrl"`
 	StatusMessage string `json:"statusMessage"`
+	CityId        string `json:"cityId"`
 }
 
 // API等の設定
-type Config struct {
+type apiIds struct {
 	ChannelSecret string `json:"channelSecret"`
 	ChannelToken  string `json:"channelToken"`
 	AppId         string `json:"appId"`
@@ -47,15 +53,16 @@ type Config struct {
 }
 
 // 天気情報作成
-func createWeatherMessage() string {
+func createWeatherMessage() (message string, err error) {
 	// 設定ファイル読み込み
-	config := new(Config)
-	if err := Read(config, configFile); err != nil {
-		log.Fatal(err)
+	apiIds := new(apiIds)
+	config := NewConfig(configFile)
+	if err = config.Read(apiIds); err != nil {
+		return
 	}
 
-	cityId := config.CityId
-	appId := config.AppId
+	cityId := apiIds.CityId
+	appId := apiIds.AppId
 
 	// 今日の天気情報を取得
 	w := weather.New(cityId, appId).GetInfoFromDate(time.Now())
@@ -65,7 +72,7 @@ func createWeatherMessage() string {
 	descriptions := w.GetDescriptions()
 
 	// 天気情報メッセージ作成
-	message := cityName + "\n" +
+	message = cityName + "\n" +
 		func() string {
 			var tempIcon string
 			for i, time := range dates {
@@ -80,11 +87,11 @@ func createWeatherMessage() string {
 				"の天気情報だよ" + "\n" + tempIcon
 		}()
 
-	return message
+	return
 }
 
 // 天気配信ジョブ
-func sendWeatherInfo() {
+func sendWeatherInfo() (err error) {
 	const layout = "15:04:05" // => hh:mm:ss
 	userinfos := new([]UserInfos)
 	var c linebot.Client
@@ -92,17 +99,18 @@ func sendWeatherInfo() {
 		t := time.Now()
 		if t.Format(layout) == "06:00:00" {
 			// DBからユーザ情報を取得
-			searchDb(userinfos, "userInfos")
+			err = searchDb(userinfos, "userInfos")
 
 			// 抽出した全ユーザ情報に天気情報を配信
 			for _, userinfo := range *userinfos {
+				if userinfo.UserID != "" {
+					// 天気情報メッセージ送信
+					var message string
+					message, err = createWeatherMessage()
+					_, err = c.PushMessage(userinfo.UserID, linebot.NewTextMessage(message)).Do()
 
-				// 天気情報メッセージ送信
-				message := createWeatherMessage()
-
-				_, err := c.PushMessage(userinfo.UserID, linebot.NewTextMessage(message)).Do()
-				if err != nil {
-					log.Print(err)
+				} else {
+					err = errors.New("Error: userId取得失敗")
 				}
 			}
 
@@ -110,38 +118,30 @@ func sendWeatherInfo() {
 			time.Sleep(1 * time.Second) // sleep 1 second
 		}
 	}
+	return
 }
 
 // ojichat実装
-func ojichat(name string) string {
+func ojichat(name string) (result string, err error) {
 	parser := &docopt.Parser{
 		OptionsFirst: true,
 	}
 	args, _ := parser.ParseArgs("", nil, "")
 	config := generator.Config{}
 	config.TargetName = name
-	err := args.Bind(&config)
-	if err != nil {
-		log.Print(err)
-		os.Exit(1)
-	}
+	err = args.Bind(&config)
 
-	result, err := generator.Start(config)
-	if err != nil {
-		log.Print(err)
-		os.Exit(1)
-	}
-	return result
+	result, err = generator.Start(config)
+
+	return result, err
 }
 
 // mongoDB接続
-func connectDb() *mgo.Database {
+func connectDb() (d *mgo.Database, err error) {
 	session, err := mgo.Dial("mongodb://localhost/mongodb")
-	if err != nil {
-		log.Fatal(err)
-	}
+	d = session.DB("mongodb")
 
-	return session.DB("mongodb")
+	return
 }
 
 func disconnectDb(db *mgo.Database) {
@@ -149,61 +149,84 @@ func disconnectDb(db *mgo.Database) {
 }
 
 // mongoDB挿入
-func insertDb(obj interface{}, colectionName string) {
-	db := connectDb()
-	defer disconnectDb(db)
-	col := db.C(colectionName)
-	if err := col.Insert(obj); err != nil {
-		log.Fatal(err)
+func insertDb(obj interface{}, colectionName string) (err error) {
+	db, err := connectDb()
+	if err != nil {
+		return
 	}
+	defer disconnectDb(db)
+
+	col := db.C(colectionName)
+	return col.Insert(obj)
 }
 
 // mongoDB削除
-func removeDb(obj interface{}, colectionName string) {
-	db := connectDb()
-	defer disconnectDb(db)
-	col := db.C(colectionName)
-	if _, err := col.RemoveAll(obj); err != nil {
-		log.Println(err)
+func removeDb(obj interface{}, colectionName string) (err error) {
+	db, err := connectDb()
+	if err != nil {
+		return
 	}
+	defer disconnectDb(db)
+
+	col := db.C(colectionName)
+	_, err = col.RemoveAll(obj)
+	return
 }
 
 // mondoDB抽出
-func searchDb(obj interface{}, colectionName string) {
-	db := connectDb()
-	defer disconnectDb(db)
-	col := db.C(colectionName)
-	if err := col.Find(nil).All(obj); err != nil {
-		log.Fatal(err)
+func searchDb(obj interface{}, colectionName string) (err error) {
+	db, err := connectDb()
+	if err != nil {
+		return
 	}
+	defer disconnectDb(db)
+
+	col := db.C(colectionName)
+	return col.Find(nil).All(obj)
 }
 
 func main() {
+	// log出力設定
+	logger := func() logger.Logger {
+		file, err := os.OpenFile(logfile, os.O_RDWR|os.O_CREATE|os.O_APPEND, 0666)
+		if err != nil {
+			log.Fatal(err)
+		}
+		defer file.Close()
+
+		return logger.New(file)
+	}()
+
 	// 設定ファイル読み込み
-	config := new(Config)
-	if err := Read(config, configFile); err != nil {
-		log.Fatal(err)
+	apiIds := new(apiIds)
+	config := NewConfig(configFile)
+	if err := config.Read(apiIds); err != nil {
+		logger.Fatal(err)
 	}
 
 	// 指定時間に天気情報を配信
-	go sendWeatherInfo()
+	go func() {
+		if err := sendWeatherInfo(); err != nil {
+			logger.Write(err)
+		}
+	}()
 
-	handler, err := httphandler.New(config.ChannelSecret, config.ChannelToken)
+	handler, err := httphandler.New(apiIds.ChannelSecret, apiIds.ChannelToken)
 	if err != nil {
-		log.Fatal(err)
+		logger.Fatal(err)
 	}
 
 	// Setup HTTP Server for receiving requests from LINE platform
 	handler.HandleEvents(func(events []*linebot.Event, r *http.Request) {
 		bot, err := handler.NewClient()
 		if err != nil {
-			log.Fatal(err)
+			logger.Fatal(err)
 			return
 		}
 
 		// イベント処理
 		for _, event := range events {
-			log.Print("start event : " + event.Type + "\n")
+			logger.Write("start event : " + event.Type)
 
 			// ユーザのIDを取得
 			userId := event.Source.UserID
@@ -217,33 +240,37 @@ func main() {
 					switch message := event.Message.(type) {
 					case *linebot.TextMessage:
 						if strings.Contains(message.Text, "天気") {
-							replyMessage = createWeatherMessage()
+							if replyMessage, err = createWeatherMessage(); err != nil {
+								logger.Write(err)
+							}
 
 						} else if strings.Contains(message.Text, "おじさん") {
-							replyMessage = ojichat(profile.DisplayName)
+							if replyMessage, err = ojichat(profile.DisplayName); err != nil {
+								logger.Write(err)
+							}
 
 						} else {
 							replyMessage = usage
 						}
 
 						// 返信処理
-						_, err := bot.ReplyMessage(event.ReplyToken, linebot.NewTextMessage(replyMessage)).Do()
-						if err != nil {
-							log.Print(err)
+						if _, err := bot.ReplyMessage(event.ReplyToken, linebot.NewTextMessage(replyMessage)).Do(); err != nil {
+							logger.Write(err)
 						}
 					}
 				} else if event.Type == linebot.EventTypeFollow {
 					// TODO insert前に存在の確認
 
 					// ユーザ情報をDBに登録
-					insertDb(profile, "userInfos")
+					if err := insertDb(profile, "userInfos"); err != nil {
+						logger.Write(err)
+					}
 
 					// フレンド登録時の挨拶
-					replyMessage := profile.DisplayName + "さん\nはじめまして、毎朝6時に天気情報を教えてあげるね"
+					replyMessage := profile.DisplayName + followMessage
 
-					_, err = bot.PushMessage(userId, linebot.NewTextMessage(replyMessage)).Do()
-					if err != nil {
-						log.Print(err)
+					if _, err = bot.PushMessage(userId, linebot.NewTextMessage(replyMessage)).Do(); err != nil {
+						logger.Write(err)
 					}
 				}
 			}
@@ -254,15 +281,15 @@ func main() {
 				removeDb(query, "userInfos")
 			}
 
-			log.Println("end event")
+			logger.Write("end event")
 		}
 	})
 	http.Handle("/callback", handler)
-	if err := http.ListenAndServeTLS(":443", config.CertFile, config.KeyFile, nil); err != nil {
-		log.Fatal("ListenAndServe: ", err)
+	if err := http.ListenAndServeTLS(":443", apiIds.CertFile, apiIds.KeyFile, nil); err != nil {
+		logger.Fatal("ListenAndServe: ", err)
 	}
 
 	// if err := http.ListenAndServe(":8080", nil); err != nil {
-	// 	log.Fatal(err)
+	// 	logger.Fatal(err)
 	// }
 }
