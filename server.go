@@ -43,7 +43,7 @@ type UserInfos struct {
 }
 
 // API等の設定
-type apiIds struct {
+type ApiIds struct {
 	ChannelSecret string `json:"channelSecret"`
 	ChannelToken  string `json:"channelToken"`
 	AppId         string `json:"appId"`
@@ -53,9 +53,8 @@ type apiIds struct {
 }
 
 // 天気情報作成
-func createWeatherMessage() (message string, err error) {
+func createWeatherMessage(apiIds *ApiIds) (message string, err error) {
 	// 設定ファイル読み込み
-	apiIds := new(apiIds)
 	config := NewConfig(configFile)
 	if err = config.Read(apiIds); err != nil {
 		return
@@ -91,26 +90,34 @@ func createWeatherMessage() (message string, err error) {
 }
 
 // 天気配信ジョブ
-func sendWeatherInfo() (err error) {
+func sendWeatherInfo(apiIds *ApiIds) (err error) {
 	const layout = "15:04:05" // => hh:mm:ss
 	userinfos := new([]UserInfos)
-	var c linebot.Client
+
 	for {
 		t := time.Now()
 		if t.Format(layout) == "06:00:00" {
 			// DBからユーザ情報を取得
-			err = searchDb(userinfos, "userInfos")
+			if err = searchDb(userinfos, "userInfos"); err != nil {
+				return
+			}
 
 			// 抽出した全ユーザ情報に天気情報を配信
 			for _, userinfo := range *userinfos {
 				if userinfo.UserID != "" {
-					// 天気情報メッセージ送信
-					var message string
-					message, err = createWeatherMessage()
-					_, err = c.PushMessage(userinfo.UserID, linebot.NewTextMessage(message)).Do()
+					var bot *linebot.Client
+					if bot, err = linebot.New(apiIds.ChannelSecret, apiIds.ChannelToken); err != nil {
+						return
 
+					} else {
+						// 天気情報メッセージ送信
+						var message string
+						message, err = createWeatherMessage(apiIds)
+						_, err = bot.PushMessage(userinfo.UserID, linebot.NewTextMessage(message)).Do()
+					}
 				} else {
 					err = errors.New("Error: userId取得失敗")
+					return
 				}
 			}
 
@@ -118,7 +125,6 @@ func sendWeatherInfo() (err error) {
 			time.Sleep(1 * time.Second) // sleep 1 second
 		}
 	}
-	return
 }
 
 // ojichat実装
@@ -196,7 +202,7 @@ func main() {
 	logger := logger.New(file)
 
 	// 設定ファイル読み込み
-	apiIds := new(apiIds)
+	apiIds := new(ApiIds)
 	config := NewConfig(configFile)
 	if err := config.Read(apiIds); err != nil {
 		logger.Fatal(err)
@@ -204,7 +210,7 @@ func main() {
 
 	// 指定時間に天気情報を配信
 	go func() {
-		if err := sendWeatherInfo(); err != nil {
+		if err := sendWeatherInfo(apiIds); err != nil {
 			logger.Write(err)
 		}
 	}()
@@ -228,6 +234,7 @@ func main() {
 
 			// ユーザのIDを取得
 			userId := event.Source.UserID
+			logger.Write("userid :" + userId)
 
 			// ユーザのプロフィールを取得後、レスポンスする
 			if profile, err := bot.GetProfile(userId).Do(); err == nil {
@@ -238,7 +245,7 @@ func main() {
 					switch message := event.Message.(type) {
 					case *linebot.TextMessage:
 						if strings.Contains(message.Text, "天気") {
-							if replyMessage, err = createWeatherMessage(); err != nil {
+							if replyMessage, err = createWeatherMessage(apiIds); err != nil {
 								logger.Write(err)
 							}
 
@@ -255,6 +262,7 @@ func main() {
 						if _, err := bot.ReplyMessage(event.ReplyToken, linebot.NewTextMessage(replyMessage)).Do(); err != nil {
 							logger.Write(err)
 						}
+						logger.Write("message.Text: " + message.Text)
 					}
 				} else if event.Type == linebot.EventTypeFollow {
 					// TODO insert前に存在の確認
@@ -276,7 +284,9 @@ func main() {
 			// ブロック時の処理、ユーザ情報をDBから削除する
 			if event.Type == linebot.EventTypeUnfollow {
 				query := bson.M{"userid": userId}
-				removeDb(query, "userInfos")
+				if err := removeDb(query, "userInfos"); err != nil {
+					logger.Write(err)
+				}
 			}
 
 			logger.Write("end event")
