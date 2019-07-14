@@ -187,15 +187,13 @@ func searchDb(obj interface{}, colectionName string) (err error) {
 
 func main() {
 	// log出力設定
-	logger := func() logger.Logger {
-		file, err := os.OpenFile(logfile, os.O_RDWR|os.O_CREATE|os.O_APPEND, 0666)
-		if err != nil {
-			log.Fatal(err)
-		}
-		defer file.Close()
+	file, err := os.OpenFile(logfile, os.O_RDWR|os.O_CREATE|os.O_APPEND, 0666)
+	if err != nil {
+		log.Fatal(err)
+	}
+	defer file.Close()
 
-		return logger.New(file)
-	}()
+	logger := logger.New(file)
 
 	// 設定ファイル読み込み
 	apiIds := new(apiIds)
