@@ -1,27 +1,25 @@
 package main
 
 import (
-	"errors"
 	"log"
 	"net/http"
 	"os"
 	"strings"
-	"time"
 
 	"github.com/yuki9431/logger"
-	"github.com/yuki9431/weather"
 
 	"github.com/docopt/docopt-go"
 	"github.com/globalsign/mgo/bson"
 	"github.com/greymd/ojichat/generator"
 	"github.com/line/line-bot-sdk-go/linebot"
 	"github.com/line/line-bot-sdk-go/linebot/httphandler"
-	"gopkg.in/mgo.v2"
 )
 
 const (
 	logfile       = "/var/log/linebot.log"
 	configFile    = "config.json"
+	mongoDial     = "mongodb://localhost/mongodb"
+	mongoName     = "mongodb"
 	followMessage = "さん\nはじめまして、毎朝6時に天気情報を教えてあげるね"
 	usage         = `機能説明
 天気　　 : 本日の天気情報を取得
@@ -53,81 +51,6 @@ type ApiIds struct {
 	KeyFile       string `json:"keyFile"`
 }
 
-// 天気情報作成
-func createWeatherMessage(apiIds *ApiIds) (message string, err error) {
-	// 設定ファイル読み込み
-	config := NewConfig(configFile)
-	if err = config.Read(apiIds); err != nil {
-		return
-	}
-
-	cityId := apiIds.CityId
-	appId := apiIds.AppId
-
-	// 今日の天気情報を取得
-	w := weather.New(cityId, appId).GetInfoFromDate(time.Now())
-	dates := w.GetDates()
-	icons := w.GetIcons()
-	cityName := w.GetCityName()
-	descriptions := w.GetDescriptions()
-
-	// 天気情報メッセージ作成
-	message = cityName + "\n" +
-		func() string {
-			var tempIcon string
-			for i, time := range dates {
-				tempIcon += time.Format("15:04") + " " +
-					w.ConvertIconToWord(icons[i]) + " " +
-					descriptions[i] + "\n"
-			}
-
-			wdays := [...]string{"日", "月", "火", "水", "木", "金", "土"}
-
-			return dates[0].Format("01/02 (") + wdays[dates[0].Weekday()] + ")" +
-				"の天気情報だよ" + "\n" + tempIcon
-		}()
-
-	return
-}
-
-// 天気配信ジョブ
-func sendWeatherInfo(apiIds *ApiIds) (err error) {
-	const layout = "15:04:05" // => hh:mm:ss
-	userinfos := new([]UserInfos)
-
-	for {
-		t := time.Now()
-		if t.Format(layout) == "06:00:00" {
-			// DBからユーザ情報を取得
-			if err = searchDb(userinfos, "userInfos"); err != nil {
-				return
-			}
-
-			// 抽出した全ユーザ情報に天気情報を配信
-			for _, userinfo := range *userinfos {
-				if userinfo.UserID != "" {
-					var bot *linebot.Client
-					if bot, err = linebot.New(apiIds.ChannelSecret, apiIds.ChannelToken); err != nil {
-						return
-
-					} else {
-						// 天気情報メッセージ送信
-						var message string
-						message, err = createWeatherMessage(apiIds)
-						_, err = bot.PushMessage(userinfo.UserID, linebot.NewTextMessage(message)).Do()
-					}
-				} else {
-					err = errors.New("Error: userId取得失敗")
-					return
-				}
-			}
-
-			// 連続送信を防止する
-			time.Sleep(1 * time.Second) // sleep 1 second
-		}
-	}
-}
-
 // ojichat実装
 func ojichat(name string) (result string, err error) {
 	parser := &docopt.Parser{
@@ -143,55 +66,6 @@ func ojichat(name string) (result string, err error) {
 	return result, err
 }
 
-// mongoDB接続
-func connectDb() (d *mgo.Database, err error) {
-	session, err := mgo.Dial("mongodb://localhost/mongodb")
-	d = session.DB("mongodb")
-
-	return
-}
-
-func disconnectDb(db *mgo.Database) {
-	db.Session.Close()
-}
-
-// mongoDB挿入
-func insertDb(obj interface{}, colectionName string) (err error) {
-	db, err := connectDb()
-	if err != nil {
-		return
-	}
-	defer disconnectDb(db)
-
-	col := db.C(colectionName)
-	return col.Insert(obj)
-}
-
-// mongoDB削除
-func removeDb(obj interface{}, colectionName string) (err error) {
-	db, err := connectDb()
-	if err != nil {
-		return
-	}
-	defer disconnectDb(db)
-
-	col := db.C(colectionName)
-	_, err = col.RemoveAll(obj)
-	return
-}
-
-// mondoDB抽出
-func searchDb(obj interface{}, colectionName string) (err error) {
-	db, err := connectDb()
-	if err != nil {
-		return
-	}
-	defer disconnectDb(db)
-
-	col := db.C(colectionName)
-	return col.Find(nil).All(obj)
-}
-
 func main() {
 	// log出力設定
 	file, err := os.OpenFile(logfile, os.O_RDWR|os.O_CREATE|os.O_APPEND, 0666)
@@ -201,6 +75,12 @@ func main() {
 	defer file.Close()
 
 	logger := logger.New(file)
+
+	// DB設定
+	mongo, err := NewMongo(mongoDial, mongoName)
+	if err != nil {
+		logger.Fatal(err)
+	}
 
 	// 設定ファイル読み込み
 	apiIds := new(ApiIds)
@@ -269,7 +149,7 @@ func main() {
 					// TODO insert前に存在の確認
 
 					// ユーザ情報をDBに登録
-					if err := insertDb(profile, "userInfos"); err != nil {
+					if err := mongo.insertDb(profile, "userInfos"); err != nil {
 						logger.Write(err)
 					}
 
@@ -285,7 +165,7 @@ func main() {
 			// ブロック時の処理、ユーザ情報をDBから削除する
 			if event.Type == linebot.EventTypeUnfollow {
 				query := bson.M{"userid": userId}
-				if err := removeDb(query, "userInfos"); err != nil {
+				if err := mongo.removeDb(query, "userInfos"); err != nil {
 					logger.Write(err)
 				}
 			}
@@ -301,4 +181,5 @@ func main() {
 	// if err := http.ListenAndServe(":8080", nil); err != nil {
 	// 	logger.Fatal(err)
 	// }
+
 }
