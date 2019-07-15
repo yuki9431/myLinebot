@@ -3,12 +3,13 @@ package main
 import (
 	"errors"
 	"log"
-	"logger"
 	"net/http"
 	"os"
 	"strings"
 	"time"
-	"weather"
+
+	"github.com/yuki9431/logger"
+	"github.com/yuki9431/weather"
 
 	"github.com/docopt/docopt-go"
 	"github.com/globalsign/mgo/bson"
