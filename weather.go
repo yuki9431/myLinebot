@@ -21,6 +21,7 @@ func createWeatherMessage(apiIds *ApiIds) (message string, err error) {
 
 	// 今日の天気情報を取得
 	w, err := weather.New(cityId, appId)
+	w.SetTimezone(*time.FixedZone("Asia/Tokyo", 9*60*60))
 	w.Infos = *w.GetInfoFromDate(time.Now())
 	dates := w.GetDates()
 	icons := w.GetIcons()
