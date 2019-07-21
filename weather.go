@@ -2,11 +2,45 @@ package main
 
 import (
 	"errors"
+	"strings"
 	"time"
 
 	"github.com/line/line-bot-sdk-go/linebot"
 	"github.com/yuki9431/weather"
 )
+
+// 天気情報を日本語に変換
+func convertWeatherToJp(description string) (jpDescription string) {
+	switch {
+	case description == "clear sky":
+		jpDescription = "快晴"
+
+	case description == "few clouds":
+		jpDescription = "晴れ"
+
+	case description == "rain":
+		jpDescription = "雨"
+
+	case description == "light rain":
+		jpDescription = "小雨"
+
+	case strings.Contains(description, "rain"):
+		jpDescription = "雨"
+
+	case strings.Contains(description, "cloud"):
+		jpDescription = "曇り"
+
+	case strings.Contains(description, "snow"):
+		jpDescription = "雪"
+
+	case strings.Contains(description, "thunderstorm"):
+		jpDescription = "雷雨"
+
+	default:
+		jpDescription = description
+	}
+	return
+}
 
 // 天気情報作成
 func createWeatherMessage(apiIds *ApiIds) (message string, err error) {
@@ -34,8 +68,8 @@ func createWeatherMessage(apiIds *ApiIds) (message string, err error) {
 			var tempIcon string
 			for i, time := range dates {
 				tempIcon += time.Format("15:04") + " " +
-					w.ConvertIconToWord(icons[i]) + " " +
-					descriptions[i] + "\n"
+					w.ConvertIconToWord(icons[i]) + "  " +
+					convertWeatherToJp(descriptions[i]) + "\n"
 			}
 
 			wdays := [...]string{"日", "月", "火", "水", "木", "金", "土"}
