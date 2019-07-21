@@ -11,33 +11,36 @@ import (
 
 // 天気情報を日本語に変換
 func convertWeatherToJp(description string) (jpDescription string) {
-	switch {
-	case description == "clear sky":
-		jpDescription = "快晴"
+	if description != "" {
+		switch {
+		case description == "clear sky":
+			jpDescription = "快晴"
 
-	case description == "few clouds":
-		jpDescription = "晴れ"
+		case description == "few clouds":
+			jpDescription = "晴れ"
 
-	case description == "rain":
-		jpDescription = "雨"
+		case description == "rain":
+			jpDescription = "雨"
 
-	case description == "light rain":
-		jpDescription = "小雨"
+		case description == "light rain":
+			jpDescription = "小雨"
 
-	case strings.Contains(description, "rain"):
-		jpDescription = "雨"
+		case strings.Contains(description, "rain"):
+			jpDescription = "雨"
 
-	case strings.Contains(description, "cloud"):
-		jpDescription = "曇り"
+		case strings.Contains(description, "cloud"):
+			jpDescription = "曇り"
 
-	case strings.Contains(description, "snow"):
-		jpDescription = "雪"
+		case strings.Contains(description, "snow"):
+			jpDescription = "雪"
 
-	case strings.Contains(description, "thunderstorm"):
-		jpDescription = "雷雨"
+		case strings.Contains(description, "thunderstorm"):
+			jpDescription = "雷雨"
 
-	default:
-		jpDescription = description
+		default:
+			jpDescription = description
+
+		}
 	}
 	return
 }
@@ -47,16 +50,23 @@ func createWeatherMessage(apiIds *ApiIds) (message string, err error) {
 	// 設定ファイル読み込み
 	config := NewConfig(configFile)
 	if err = config.Read(apiIds); err != nil {
+		err = errors.New("err :faild read config")
 		return
 	}
 
 	cityId := apiIds.CityId
 	appId := apiIds.AppId
 
-	// 今日の天気情報を取得
+	// 今日の天気情報を取得　今日の天気情報がない場合は、翌日の天気を取得(0時に近い時を想定)
 	w, err := weather.New(cityId, appId)
 	w.SetTimezone(*time.FixedZone("Asia/Tokyo", 9*60*60))
-	w.Infos = *w.GetInfoFromDate(time.Now())
+	if todayInfo := w.GetInfoFromDate(time.Now()); todayInfo.List != nil {
+		w.Infos = *todayInfo
+
+	} else {
+		todayInfo := w.GetInfoFromDate(time.Now().Add(24 * time.Hour))
+		w.Infos = *todayInfo
+	}
 	dates := w.GetDates()
 	icons := w.GetIcons()
 	cityName := w.GetCityName()
@@ -66,6 +76,7 @@ func createWeatherMessage(apiIds *ApiIds) (message string, err error) {
 	message = cityName + "\n" +
 		func() string {
 			var tempIcon string
+
 			for i, time := range dates {
 				tempIcon += time.Format("15:04") + " " +
 					w.ConvertIconToWord(icons[i]) + "  " +
