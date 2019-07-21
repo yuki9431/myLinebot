@@ -59,7 +59,7 @@ func createWeatherMessage(apiIds *ApiIds) (message string, err error) {
 
 	// 今日の天気情報を取得　今日の天気情報がない場合は、翌日の天気を取得(0時に近い時を想定)
 	w, err := weather.New(cityId, appId)
-	w.SetTimezone(*time.FixedZone("Asia/Tokyo", 9*60*60))
+	w.SetTimezone(time.FixedZone("Asia/Tokyo", 9*60*60))
 	if todayInfo := w.GetInfoFromDate(time.Now()); todayInfo.List != nil {
 		w.Infos = *todayInfo
 
