@@ -2,6 +2,7 @@ package main
 
 import (
 	"errors"
+	"strconv"
 	"strings"
 	"time"
 
@@ -69,6 +70,7 @@ func createWeatherMessage(apiIds *ApiIds) (message string, err error) {
 	}
 	dates := w.GetDates()
 	icons := w.GetIcons()
+	temps := w.GetTemps()
 	cityName := w.GetCityName()
 	descriptions := w.GetDescriptions()
 
@@ -80,7 +82,8 @@ func createWeatherMessage(apiIds *ApiIds) (message string, err error) {
 			for i, time := range dates {
 				tempIcon += time.Format("15:04") + " " +
 					w.ConvertIconToWord(icons[i]) + "  " +
-					convertWeatherToJp(descriptions[i]) + "\n"
+					convertWeatherToJp(descriptions[i]) + "  " +
+					strconv.Itoa(temps[i]) + "℃" + "\n"
 			}
 
 			wdays := [...]string{"日", "月", "火", "水", "木", "金", "土"}
