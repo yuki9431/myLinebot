@@ -81,8 +81,8 @@ func createWeatherMessage(apiIds *ApiIds) (message string, err error) {
 
 			for i, time := range dates {
 				tempIcon += time.Format("15:04") + " " +
+					convertWeatherToJp(descriptions[i]) +
 					w.ConvertIconToWord(icons[i]) + "  " +
-					convertWeatherToJp(descriptions[i]) + "  " +
 					strconv.Itoa(temps[i]) + "℃" + "\n"
 			}
 
