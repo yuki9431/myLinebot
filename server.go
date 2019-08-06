@@ -76,12 +76,6 @@ func main() {
 
 	logger := logger.New(file)
 
-	// DB設定
-	mongo, err := NewMongo(mongoDial, mongoName)
-	if err != nil {
-		logger.Fatal(err)
-	}
-
 	// 設定ファイル読み込み
 	apiIds := new(ApiIds)
 	config := NewConfig(configFile)
@@ -111,6 +105,12 @@ func main() {
 
 		// イベント処理
 		for _, event := range events {
+			// DB設定
+			mongo, err := NewMongo(mongoDial, mongoName)
+			if err != nil {
+				logger.Fatal(err)
+			}
+
 			logger.Write("start event : " + event.Type)
 
 			// ユーザのIDを取得
