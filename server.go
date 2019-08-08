@@ -6,13 +6,13 @@ import (
 	"os"
 	"strings"
 
-	"github.com/yuki9431/logger"
-
 	"github.com/docopt/docopt-go"
 	"github.com/globalsign/mgo/bson"
 	"github.com/greymd/ojichat/generator"
 	"github.com/line/line-bot-sdk-go/linebot"
 	"github.com/line/line-bot-sdk-go/linebot/httphandler"
+	"github.com/yuki9431/logger"
+	"github.com/yuki9431/mongoHelper"
 )
 
 const (
@@ -106,7 +106,7 @@ func main() {
 		// イベント処理
 		for _, event := range events {
 			// DB設定
-			mongo, err := NewMongo(mongoDial, mongoName)
+			mongo, err := mongoHelper.NewMongo(mongoDial, mongoName)
 			if err != nil {
 				logger.Fatal(err)
 			}

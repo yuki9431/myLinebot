@@ -105,7 +105,7 @@ func sendWeatherInfo(apiIds *ApiIds) (err error) {
 		t := time.Now()
 		if t.Format(layout) == "06:00:00" {
 			// DBからユーザ情報を取得
-			if err = mongo.searchDb(userinfos, "userInfos"); err != nil {
+			if err = mongo.searchDb(userinfos, nil, "userInfos"); err != nil {
 				return
 			}
 
