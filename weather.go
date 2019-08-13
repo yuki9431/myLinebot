@@ -7,6 +7,7 @@ import (
 	"time"
 
 	"github.com/line/line-bot-sdk-go/linebot"
+	"github.com/yuki9431/mongoHelper"
 	"github.com/yuki9431/weather"
 )
 
@@ -99,13 +100,13 @@ func createWeatherMessage(apiIds *ApiIds) (message string, err error) {
 func sendWeatherInfo(apiIds *ApiIds) (err error) {
 	const layout = "15:04:05" // => hh:mm:ss
 	userinfos := new([]UserInfos)
-	mongo, err := NewMongo(mongoDial, mongoName)
+	mongo, err := mongoHelper.NewMongo(mongoDial, mongoName)
 
 	for {
 		t := time.Now()
 		if t.Format(layout) == "06:00:00" {
 			// DBからユーザ情報を取得
-			if err = mongo.searchDb(userinfos, nil, "userInfos"); err != nil {
+			if err = mongo.SearchDb(userinfos, nil, "userInfos"); err != nil {
 				return
 			}
 

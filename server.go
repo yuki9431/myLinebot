@@ -149,7 +149,7 @@ func main() {
 					// TODO insert前に存在の確認
 
 					// ユーザ情報をDBに登録
-					if err := mongo.insertDb(profile, "userInfos"); err != nil {
+					if err := mongo.InsertDb(profile, "userInfos"); err != nil {
 						logger.Write(err)
 					}
 
@@ -165,7 +165,7 @@ func main() {
 			// ブロック時の処理、ユーザ情報をDBから削除する
 			if event.Type == linebot.EventTypeUnfollow {
 				query := bson.M{"userid": userId}
-				if err := mongo.removeDb(query, "userInfos"); err != nil {
+				if err := mongo.RemoveDb(query, "userInfos"); err != nil {
 					logger.Write(err)
 				}
 			}
