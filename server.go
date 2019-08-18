@@ -16,20 +16,21 @@ import (
 )
 
 const (
-	logfile       = "/var/log/linebot.log"
-	configFile    = "config.json"
-	mongoDial     = "mongodb://localhost/mongodb"
-	mongoName     = "mongodb"
-	followMessage = "さん\nはじめまして、毎朝6時に天気情報を教えてあげるね"
-	usage         = `機能説明
-天気　　 : 本日の天気情報を取得
-おじさん : オジさん？に呼びかける
+	logfile           = "/var/log/linebot.log"
+	configFile        = "config.json"
+	mongoDial         = "mongodb://localhost/mongodb"
+	mongoName         = "mongodb"
+	followMessage     = "さん\nはじめまして、毎朝6時に天気情報を教えてあげるね"
+	changeCityMwssage = "お住まいの都市を変更するには、下記の通りメッセージをお送りください\n" +
+		"change city to Tokyo" +
+		"change city to Shiga" +
+		"change city to shiga"
 
-comming soon...
-都市変更 : 天気情報取得の所在地を変更する
-時間変更 : 毎日の天気配信時刻を変更する
-
-https://github.com/yuki9431/myLinebot`
+	usage = "機能説明\n" +
+		"天気　　 : 本日の天気情報を取得\n" +
+		"おじさん : オジさん？に呼びかける\n" +
+		"都市変更 : 天気情報取得の所在地を変更する\n" +
+		"https://github.com/yuki9431/myLinebot`"
 )
 
 // ユーザプロフィール情報
@@ -170,6 +171,7 @@ func main() {
 				}
 			}
 
+			mongo.DisconnectDb()
 			logger.Write("end event")
 		}
 	})

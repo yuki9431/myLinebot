@@ -129,6 +129,8 @@ func sendWeatherInfo(apiIds *ApiIds) (err error) {
 				}
 			}
 
+			mongo.DisconnectDb()
+
 			// 連続送信を防止する
 			time.Sleep(1 * time.Second) // sleep 1 second
 		}
