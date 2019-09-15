@@ -22,9 +22,8 @@ const (
 	mongoName         = "mongodb"
 	followMessage     = "さん\nはじめまして、毎朝6時に天気情報を教えてあげるね"
 	changeCityMwssage = "お住まいの都市を変更するには、下記の通りメッセージをお送りください\n" +
-		"change city to Tokyo" +
-		"change city to Shiga" +
-		"change city to shiga"
+		"都市変更:東京\n" +
+		"都市変更:Brasil\n"
 
 	usage = "機能説明\n" +
 		"天気　　 : 本日の天気情報を取得\n" +
@@ -131,11 +130,27 @@ func main() {
 								logger.Write(err)
 							}
 
-						} else if strings.Contains(message.Text, "おじさん") {
+						} else if strings.Contains(message.Text, "おじさん") || strings.Contains(message.Text, "オジサン") {
 							if replyMessage, err = ojichat(profile.DisplayName); err != nil {
 								logger.Write(err)
 							}
 
+						} else if strings.Contains(message.Text, "都市変更:") {
+							cityId := strings.Replace(message.Text, " ", "", -1) // 全ての半角スペースを消す
+							cityId = strings.Replace(cityId, "都市変更:", "", 1)     // 頭の都市変更:を消す
+
+							// 都市IDをDBに登録する
+							if cityId != "" {
+								// DB登録処理
+								selector := bson.M{"userid": profile.UserID}
+								update := bson.M{"$set": bson.M{"cityid": cityId}}
+								if err := mongo.UpdateDb(selector, update, "userInfos"); err != nil {
+									logger.Write("failed netdekomonid update")
+
+								} else {
+									// 都市名をDBから抽出する
+								}
+							}
 						} else {
 							replyMessage = usage
 						}
@@ -160,14 +175,13 @@ func main() {
 					if _, err = bot.PushMessage(userId, linebot.NewTextMessage(replyMessage)).Do(); err != nil {
 						logger.Write(err)
 					}
-				}
-			}
+				} else if event.Type == linebot.EventTypeUnfollow {
 
-			// ブロック時の処理、ユーザ情報をDBから削除する
-			if event.Type == linebot.EventTypeUnfollow {
-				query := bson.M{"userid": userId}
-				if err := mongo.RemoveDb(query, "userInfos"); err != nil {
-					logger.Write(err)
+					// ユーザ情報をDBから削除
+					selector := bson.M{"userid": userId}
+					if err := mongo.RemoveDb(selector, "userInfos"); err != nil {
+						logger.Write(err)
+					}
 				}
 			}
 
