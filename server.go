@@ -33,7 +33,7 @@ const (
 )
 
 // ユーザプロフィール情報
-type UserInfos struct {
+type UserInfo struct {
 	UserID        string `json:"userId"`
 	DisplayName   string `json:"displayName"`
 	PictureURL    string `json:"pictureUrl"`
@@ -117,7 +117,13 @@ func main() {
 			userId := event.Source.UserID
 			logger.Write("userid :" + userId)
 
-			// ユーザのプロフィールを取得後、レスポンスする
+			// 都市IDを取得するため、DBからユーザ情報を獲得
+			userInfos := new([]UserInfo)
+			if err := mongo.SearchDb(userInfos, bson.M{"userid": userId}, "userInfos"); err != nil {
+				return
+			}
+
+			// APIからユーザのプロフィールを取得後、レスポンスする
 			if profile, err := bot.GetProfile(userId).Do(); err == nil {
 				if event.Type == linebot.EventTypeMessage {
 					// 返信メッセージ
@@ -126,7 +132,7 @@ func main() {
 					switch message := event.Message.(type) {
 					case *linebot.TextMessage:
 						if strings.Contains(message.Text, "天気") {
-							if replyMessage, err = createWeatherMessage(apiIds); err != nil {
+							if replyMessage, err = createWeatherMessage(apiIds, (*userInfos)[0]); err != nil { // (*userInfos)[0]は一意の値しか取れない想定
 								logger.Write(err)
 							}
 
@@ -137,20 +143,35 @@ func main() {
 
 						} else if strings.Contains(message.Text, "都市変更:") {
 							cityId := strings.Replace(message.Text, " ", "", -1) // 全ての半角スペースを消す
-							cityId = strings.Replace(cityId, "都市変更:", "", 1)     // 頭の都市変更:を消す
+							cityName := strings.Replace(cityId, "都市変更:", "", 1)  // 頭の都市変更:を消す
+							cityId, cityErr := ConvertCityToId(cityName)         // // 該当都市がない場合は東京を設定する
 
 							// 都市IDをDBに登録する
-							if cityId != "" {
-								// DB登録処理
-								selector := bson.M{"userid": profile.UserID}
-								update := bson.M{"$set": bson.M{"cityid": cityId}}
-								if err := mongo.UpdateDb(selector, update, "userInfos"); err != nil {
-									logger.Write("failed netdekomonid update")
+							selector := bson.M{"userid": profile.UserID}
+							update := bson.M{"$set": bson.M{"cityid": cityId}}
 
+							if err := mongo.UpdateDb(selector, update, "userInfos"); err != nil {
+								replyMessage = "都市の変更に失敗しました...\n" +
+									"何度か実施しても改善されない場合は、開発者までご連絡ください。"
+								logger.Write("failed update ciyId update")
+
+							} else {
+								if cityErr != nil {
+									replyMessage = "該当都市がな見つかりません💦\n" +
+										"とりあえず東京に設定しておきますね"
 								} else {
-									// 都市名をDBから抽出する
+									replyMessage = "選択された都市に変更しました！"
 								}
 							}
+
+						} else if strings.Contains(message.Text, "都市一覧") {
+							var cityList []string
+
+							replyMessage = "都市一覧\n"
+							for _, city := range cityList {
+								replyMessage = replyMessage + city + "\n"
+							}
+
 						} else {
 							replyMessage = usage
 						}

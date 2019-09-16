@@ -48,7 +48,7 @@ func convertWeatherToJp(description string) (jpDescription string) {
 }
 
 // 天気情報作成
-func createWeatherMessage(apiIds *ApiIds) (message string, err error) {
+func createWeatherMessage(apiIds *ApiIds, userInfo UserInfo) (message string, err error) {
 	// 設定ファイル読み込み
 	config := NewConfig(configFile)
 	if err = config.Read(apiIds); err != nil {
@@ -56,7 +56,7 @@ func createWeatherMessage(apiIds *ApiIds) (message string, err error) {
 		return
 	}
 
-	cityId := apiIds.CityId
+	cityId := userInfo.CityId
 	appId := apiIds.AppId
 
 	// 今日の天気情報を取得　今日の天気情報がない場合は、翌日の天気を取得(0時に近い時を想定)
@@ -99,7 +99,7 @@ func createWeatherMessage(apiIds *ApiIds) (message string, err error) {
 // 天気配信ジョブ
 func sendWeatherInfo(apiIds *ApiIds) (err error) {
 	const layout = "15:04:05" // => hh:mm:ss
-	userinfos := new([]UserInfos)
+	userinfos := new([]UserInfo)
 	mongo, err := mongoHelper.NewMongo(mongoDial, mongoName)
 
 	for {
@@ -115,12 +115,13 @@ func sendWeatherInfo(apiIds *ApiIds) (err error) {
 				if userinfo.UserID != "" {
 					var bot *linebot.Client
 					if bot, err = linebot.New(apiIds.ChannelSecret, apiIds.ChannelToken); err != nil {
+						// エラー時はその場で終了
 						return
 
 					} else {
 						// 天気情報メッセージ送信
 						var message string
-						message, err = createWeatherMessage(apiIds)
+						message, err = createWeatherMessage(apiIds, userinfo)
 						_, err = bot.PushMessage(userinfo.UserID, linebot.NewTextMessage(message)).Do()
 					}
 				} else {
