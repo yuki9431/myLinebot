@@ -1,10 +1,13 @@
 package main
 
 import (
+	"linebot/config"
 	"log"
 	"net/http"
 	"os"
 	"strings"
+
+	"./config"
 
 	"github.com/docopt/docopt-go"
 	"github.com/globalsign/mgo/bson"
@@ -17,7 +20,7 @@ import (
 
 const (
 	logfile           = "/var/log/linebot.log"
-	configFile        = "config.json"
+	configFile        = "config/config.json"
 	mongoDial         = "mongodb://localhost/mongodb"
 	mongoName         = "mongodb"
 	followMessage     = "さん\nはじめまして、毎朝6時に天気情報を教えてあげるね"
@@ -78,7 +81,7 @@ func main() {
 
 	// 設定ファイル読み込み
 	apiIds := new(ApiIds)
-	config := NewConfig(configFile)
+	config := config.NewConfig(configFile)
 	if err := config.Read(apiIds); err != nil {
 		logger.Fatal(err)
 	}

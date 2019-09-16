@@ -8,7 +8,7 @@ import (
 )
 
 // 都市情報
-type CityInfo struct {
+type cityInfo struct {
 	CityID  string `json"id"`
 	Name    string `json"name"`
 	Country string `json"country"`
@@ -16,7 +16,7 @@ type CityInfo struct {
 
 // 都市一覧を返す *LineAPIの文字数制限に引っかかるため未使用
 func getAllCityList(cityList *[]string) (err error) {
-	cityInfos := new([]CityInfo)
+	cityInfos := new([]cityInfo)
 
 	mongo, err := mongoHelper.NewMongo(mongoDial, mongoName)
 	if err == nil {
