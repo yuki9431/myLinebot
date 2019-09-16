@@ -89,6 +89,8 @@ func ConvertCityToId(cityName string) (cityId string, err error) {
 		cityId = "1857352"
 	case strings.Contains(cityName, "滋賀"):
 		cityId = "1852553"
+	case strings.Contains(cityName, "長浜"):
+		cityId = "1856239"
 	case strings.Contains(cityName, "京都"):
 		cityId = "1857910"
 	case strings.Contains(cityName, "大阪"):
