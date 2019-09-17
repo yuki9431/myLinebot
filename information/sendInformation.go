@@ -1,4 +1,4 @@
-package information
+package main
 
 import (
 	"errors"
@@ -14,7 +14,7 @@ import (
 
 const (
 	logfile    = "/var/log/linebot.log"
-	configFile = "../config.json"
+	configFile = "../config/config.json"
 	mongoDial  = "mongodb://localhost/mongodb"
 	mongoName  = "mongodb"
 )
