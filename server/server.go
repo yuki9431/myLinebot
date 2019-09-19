@@ -192,7 +192,7 @@ func main() {
 					userInfo := new(UserInfo)
 					userInfo.UserID = profile.UserID
 					userInfo.DisplayName = profile.DisplayName
-					userInfo.CityId, _ = ConvertCityToId("東京") //初回登録時には問答無用で東京民や
+					userInfo.CityId, _ = GetCityId("東京") //初回登録時には問答無用で東京民や
 					userInfo.PictureURL = profile.PictureURL
 					userInfo.StatusMessage = profile.StatusMessage
 
