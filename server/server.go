@@ -147,8 +147,8 @@ func main() {
 							cityName = strings.Replace(cityName, "都市変更:", "", 1)   // 頭の都市変更:を消す
 
 							// 都市IDを取得する
-							var cityId string
-							if cityId, err := GetCityId(cityInfo, cityName); err != nil {
+							cityId, err := GetCityId(cityName)
+							if err != nil {
 								logger.Write(err)
 							}
 

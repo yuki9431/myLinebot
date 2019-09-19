@@ -42,35 +42,53 @@ func GetCityInfo(cityInfo *CityInfo, cityId string) {
 	cityInfos := new([]CityInfo)
 
 	mongo, err := mongoHelper.NewMongo(mongoDial, mongoName)
+	defer mongo.DisconnectDb()
+
 	if err == nil {
 
 		// DBから都市一覧を取得
 		selector := bson.M{"cityid": cityId}
 		if err = mongo.SearchDb(cityInfos, selector, "cityInfo"); err != nil {
-			 = nil
-		}
 
-		for _, cityInfo := range *cityInfos {
-			*cityList = append(*cityList, cityInfo.Name)
 		}
+		// 取得した情報をcityInfoに渡す
+		cityInfo.CityID = (*cityInfos)[0].CityID
+		cityInfo.Country = (*cityInfos)[0].Country
+		cityInfo.Name = (*cityInfos)[0].Name
 
 	}
-	mongo.DisconnectDb()
 }
 
 // 都市名から都市IDを抽出する
-func GetCityId(cityName string) (cityId, string, err error) {
+func GetCityId(cityName string) (cityId string, err error) {
 	cityInfos := new([]CityInfo)
 
 	mongo, err := mongoHelper.NewMongo(mongoDial, mongoName)
+	defer mongo.DisconnectDb()
+
 	if err == nil {
 		// DBから都市一覧を取得 1つだけ取得できる想定
 		selector := bson.M{"cityname": cityName}
 		err = mongo.SearchDb(cityInfos, selector, "cityList")
 	}
-	mongo.DisconnectDb()
 
 	return (*cityInfos)[0].CityID, nil
+}
+
+// 都市IDから都市名を取得
+func GetCityName(cityId string) (cityName string, err error) {
+	cityInfos := new([]CityInfo)
+
+	mongo, err := mongoHelper.NewMongo(mongoDial, mongoName)
+	defer mongo.DisconnectDb()
+
+	if err == nil {
+		// DBから都市一覧を取得 1つだけ取得できる想定
+		selector := bson.M{"cityid": cityId}
+		err = mongo.SearchDb(cityInfos, selector, "cityList")
+	}
+
+	return (*cityInfos)[0].Name, nil
 }
 
 // 都道府県をIDに変換

@@ -49,7 +49,7 @@ func convertWeatherToJp(description string) (jpDescription string) {
 }
 
 // 天気情報作成
-func createWeatherMessage(apiIds *ApiIds, userInfo UserInfo, cityInfo CityInfo) (message string, err error) {
+func createWeatherMessage(apiIds *ApiIds, userInfo UserInfo) (message string, err error) {
 	// 設定ファイル読み込み
 	config := config.NewConfig(configFile)
 	if err = config.Read(apiIds); err != nil {
@@ -59,6 +59,13 @@ func createWeatherMessage(apiIds *ApiIds, userInfo UserInfo, cityInfo CityInfo) 
 
 	cityId := userInfo.CityId
 	appId := apiIds.AppId
+
+	// APIだと英語表記になるのでDBから都市名を取得
+	cityName, err := GetCityName(cityId)
+	if err != nil {
+		err = errors.New("err : faild get cityName")
+		return
+	}
 
 	// 今日の天気情報を取得　今日の天気情報がない場合は、翌日の天気を取得(0時に近い時を想定)
 	w, err := weather.New(cityId, appId)
@@ -73,7 +80,6 @@ func createWeatherMessage(apiIds *ApiIds, userInfo UserInfo, cityInfo CityInfo) 
 	dates := w.GetDates()
 	icons := w.GetIcons()
 	temps := w.GetTemps()
-	cityName := cityInfo.Name // APIだと英語表記になるのでDBから持ってくる
 	descriptions := w.GetDescriptions()
 
 	// 天気情報メッセージ作成
@@ -101,8 +107,8 @@ func createWeatherMessage(apiIds *ApiIds, userInfo UserInfo, cityInfo CityInfo) 
 func sendWeatherInfo(apiIds *ApiIds) (err error) {
 	const layout = "15:04:05" // => hh:mm:ss
 	userinfos := new([]UserInfo)
-	cityInfos := new([]CityInfo)
 	mongo, err := mongoHelper.NewMongo(mongoDial, mongoName)
+	defer mongo.DisconnectDb()
 
 	for {
 		t := time.Now()
@@ -111,9 +117,6 @@ func sendWeatherInfo(apiIds *ApiIds) (err error) {
 			if err = mongo.SearchDb(userinfos, nil, "userInfos"); err != nil {
 				return
 			}
-
-			// DBから都市情報を取得
-			if err = GetCityInfo(cityInfo, )
 
 			// 抽出した全ユーザ情報に天気情報を配信
 			for _, userinfo := range *userinfos {
@@ -134,8 +137,6 @@ func sendWeatherInfo(apiIds *ApiIds) (err error) {
 					return
 				}
 			}
-
-			mongo.DisconnectDb()
 
 			// 連続送信を防止する
 			time.Sleep(1 * time.Second) // sleep 1 second
