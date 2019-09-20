@@ -17,20 +17,15 @@ import (
 )
 
 const (
-	logfile           = "/var/log/linebot.log"
-	configFile        = "config/config.json"
-	mongoDial         = "mongodb://localhost/mongodb"
-	mongoName         = "mongodb"
-	followMessage     = "さん\nはじめまして、毎朝6時に天気情報を教えてあげるね"
-	changeCityMwssage = "お住まいの都市を変更するには、下記の通りメッセージをお送りください\n" +
-		"都市変更:東京\n" +
-		"都市変更:Brasil\n"
+	logfile    = "/var/log/linebot.log"
+	configFile = "config/config.json"
+	mongoDial  = "mongodb://localhost/mongodb"
+	mongoName  = "mongodb"
 
 	usage = "機能説明\n" +
-		"天気　　 : 本日の天気情報を取得\n" +
-		"おじさん : オジさん？に呼びかける\n" +
-		"都市変更 : 天気情報取得の所在地を変更する\n" +
-		"https://github.com/yuki9431/myLinebot`"
+		"[天気]　　  本日の天気情報を取得\n" +
+		"[おじさん]  オジさん？に呼びかける\n" +
+		"[都市変更:都道府県] 天気情報取得の所在地を変更する\n"
 )
 
 // ユーザプロフィール情報
@@ -202,17 +197,27 @@ func main() {
 					}
 
 					// フレンド登録時の挨拶
-					replyMessage := profile.DisplayName + followMessage
+					var replyMessages [5]string
+					replyMessages[0] = profile.DisplayName + "さん\nはじめまして、毎朝6時に天気情報を教えてあげるね"
+					replyMessages[1] = usage
+					replyMessages[2] = "お住まいの都市を変更するには、下記の通りメッセージをお送りください"
+					replyMessages[3] = "都市変更:東京"
+					replyMessages[4] = "都市変更:Brasil"
 
-					if _, err = bot.PushMessage(userId, linebot.NewTextMessage(replyMessage)).Do(); err != nil {
-						logger.Write(err)
+					for _, replyMessage := range replyMessages {
+						if _, err = bot.PushMessage(userId, linebot.NewTextMessage(replyMessage)).Do(); err != nil {
+							logger.Write(err)
+						}
 					}
+
 				} else if event.Type == linebot.EventTypeUnfollow {
 
 					// ユーザ情報をDBから削除
 					selector := bson.M{"userid": userId}
 					if err := mongo.RemoveDb(selector, "userInfos"); err != nil {
 						logger.Write(err)
+					} else {
+						logger.Write("success delete:" + userId)
 					}
 				}
 			}
