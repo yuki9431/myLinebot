@@ -47,7 +47,7 @@ type ApiIds struct {
 	KeyFile       string `json:"keyFile"`
 }
 
-// ojichat実�
+// ojichat実装
 func ojichat(name string) (result string, err error) {
 	parser := &docopt.Parser{
 		OptionsFirst: true,
@@ -78,6 +78,9 @@ func main() {
 	if err := config.Read(apiIds); err != nil {
 		logger.Fatal(err)
 	}
+
+	// 開始メッセージ
+	logger.Write("start linebot")
 
 	// 指定時間に天気情報を配信
 	go func() {
