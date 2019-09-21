@@ -1,4 +1,4 @@
-Cafe com Leite
+天気の子
 ====
 
 ## Overview
@@ -7,6 +7,7 @@ Cafe com Leite
 
 ## Description
 - 毎朝6時に天気情報配信
+- 天気を聞くと設定された地域の天気予報を教えてくれる
 - 返信イベントは[ojichat](https://github.com/greymd/ojichat)搭載
 
 ## Requirement
