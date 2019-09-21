@@ -7,9 +7,8 @@ import (
 
 // 都市情報
 type CityInfo struct {
-	CityID  string
-	Name    string
-	Country string
+	CityName string `json:"cityname"`
+	CityID   string `json:"cityid"`
 }
 
 // 都市一覧を返す *LineAPIの文字数制限に引っかかるため未使用
@@ -25,7 +24,7 @@ func GetAllCityList(cityList *[]string) (err error) {
 		}
 
 		for _, cityInfo := range *cityInfos {
-			*cityList = append(*cityList, cityInfo.Name)
+			*cityList = append(*cityList, cityInfo.CityName)
 		}
 
 	}
@@ -45,13 +44,12 @@ func GetCityInfo(cityInfo *CityInfo, cityId string) {
 
 		// DBから都市一覧を取得
 		selector := bson.M{"cityid": cityId}
-		if err = mongo.SearchDb(cityInfos, selector, "cityInfo"); err != nil {
+		if err = mongo.SearchDb(cityInfos, selector, "cityList"); err != nil {
 
 		}
 		// 取得した情報をcityInfoに渡す
 		cityInfo.CityID = (*cityInfos)[0].CityID
-		cityInfo.Country = (*cityInfos)[0].Country
-		cityInfo.Name = (*cityInfos)[0].Name
+		cityInfo.CityName = (*cityInfos)[0].CityName
 
 	}
 }
@@ -85,5 +83,5 @@ func GetCityName(cityId string) (cityName string, err error) {
 		err = mongo.SearchDb(cityInfos, selector, "cityList")
 	}
 
-	return (*cityInfos)[0].Name, nil
+	return (*cityInfos)[0].CityName, nil
 }
