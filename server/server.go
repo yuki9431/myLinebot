@@ -22,10 +22,13 @@ const (
 	mongoDial  = "mongodb://localhost/mongodb"
 	mongoName  = "mongodb"
 
-	usage = "機能説明\n" +
-		"[天気]　　  本日の天気情報を取得\n" +
-		"[おじさん]  オジさん？に呼びかける\n" +
-		"[都市変更:都道府県] 天気情報取得の所在地を変更する\n"
+	usage = "レスポンス説明\n" +
+		"[天気]\n" +
+		"  本日の天気情報を取得\n\n" +
+		"[おじさん]\n" +
+		"  オジさん？に呼びかける\n\n" +
+		"[都市変更:都道府県]\n" +
+		"  天気情報取得の所在地を変更する"
 )
 
 // ユーザプロフィール情報
@@ -80,7 +83,7 @@ func main() {
 	}
 
 	// 開始メッセージ
-	logger.Write("start linebot")
+	logger.Write("start server linebot")
 
 	// 指定時間に天気情報を配信
 	go func() {
@@ -119,6 +122,7 @@ func main() {
 			// 都市IDを取得するため、DBからユーザ情報を獲得
 			userInfos := new([]UserInfo)
 			if err := mongo.SearchDb(userInfos, bson.M{"userid": userId}, "userInfos"); err != nil {
+				logger.Write("err search userInfo" + err.Error())
 				return
 			}
 
@@ -168,12 +172,12 @@ func main() {
 							}
 
 						} else if strings.Contains(message.Text, "都市一覧") {
-							var cityList []string
+							cityList := new([]string)
+							GetAllCityList(cityList)
 
 							replyMessage = "都市一覧\n"
-							for _, city := range cityList {
+							for _, city := range *cityList {
 								replyMessage = replyMessage + city + "\n"
-								// TODO 都市一覧を取得する
 							}
 
 						} else {
@@ -213,15 +217,18 @@ func main() {
 						}
 					}
 
-				} else if event.Type == linebot.EventTypeUnfollow {
+				}
+			}
 
-					// ユーザ情報をDBから削除
-					selector := bson.M{"userid": userId}
-					if err := mongo.RemoveDb(selector, "userInfos"); err != nil {
-						logger.Write(err)
-					} else {
-						logger.Write("success delete:" + userId)
-					}
+			// ブロック処理時はプロフィールを取得できないので、if文の外に記載
+			if event.Type == linebot.EventTypeUnfollow {
+
+				// ユーザ情報をDBから削除
+				selector := bson.M{"userid": userId}
+				if err := mongo.RemoveDb(selector, "userInfos"); err != nil {
+					logger.Write(err)
+				} else {
+					logger.Write("success delete:" + userId)
 				}
 			}
 
