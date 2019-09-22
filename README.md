@@ -6,6 +6,7 @@
 個人遊び用のLinebot. 
 
 ![Demo](https://github.com/yuki9431/Demo/blob/master/linebot/sendWeatherDemo.gif?raw=true)
+![qrcode](https://github.com/yuki9431/Demo/blob/master/linebot/lineQrCode.png)
 
 ## Description
 - 毎朝6時に天気情報配信
