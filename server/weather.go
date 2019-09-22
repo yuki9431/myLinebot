@@ -120,7 +120,7 @@ func sendWeatherInfo(apiIds *ApiIds) (err error) {
 
 			// 抽出した全ユーザ情報に天気情報を配信
 			for _, userinfo := range *userinfos {
-				if userinfo.UserID != "" {
+				if userinfo.CityId != "" {
 					var bot *linebot.Client
 					if bot, err = linebot.New(apiIds.ChannelSecret, apiIds.ChannelToken); err != nil {
 						// エラー時はその場で終了
