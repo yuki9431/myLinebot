@@ -5,6 +5,8 @@
 
 個人遊び用のLinebot. 
 
+![Demo](https://github.com/yuki9431/Demo/blob/master/linebot/sendWeatherDemo.gif?raw=true)
+
 ## Description
 - 毎朝6時に天気情報配信
 - 天気を聞くと設定された地域の天気予報を教えてくれる
