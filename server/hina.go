@@ -10,7 +10,9 @@ func HinaResponce() (replyMessage string) {
 
 	// セリフ一覧
 	replyMessages := []string{
-		"今から晴れるよ",
+		"ねえ、今から晴れるよ",
+		"ねえ、今からキレるよ？",
+		"信じられない。気持ち悪い。最悪",
 	}
 
 	// 乱数seedを設定
