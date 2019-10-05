@@ -2,7 +2,7 @@ package main
 
 import (
 	"errors"
-	"linebot/config"
+	"myLinebot/config"
 	"strconv"
 	"strings"
 	"time"

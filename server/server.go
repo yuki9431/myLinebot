@@ -1,8 +1,8 @@
 package main
 
 import (
-	"linebot/config"
 	"log"
+	"myLinebot/config"
 	"net/http"
 	"os"
 	"strings"
