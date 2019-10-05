@@ -180,8 +180,12 @@ func main() {
 								replyMessage = replyMessage + city + "\n"
 							}
 
-						} else {
+						} else if strings.Contains(message.Text, "ヘルプ") || strings.Contains(message.Text, "help") {
+							// botの機能を返信する
 							replyMessage = usage
+						} else {
+							// 100%の晴れ女
+							replyMessage = HinaResponce()
 						}
 
 						// 返信処理
