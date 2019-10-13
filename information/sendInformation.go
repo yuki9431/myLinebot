@@ -3,7 +3,7 @@ package main
 import (
 	"errors"
 	"flag"
-	"linebot/config"
+	"myLinebot/config"
 	"log"
 	"logger"
 	"mongoHelper"
