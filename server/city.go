@@ -5,13 +5,13 @@ import (
 	"github.com/yuki9431/mongoHelper"
 )
 
-// 都市情報
+// CityInfo 都市情報
 type CityInfo struct {
 	CityName string `json:"cityname"`
 	CityID   string `json:"cityid"`
 }
 
-// 都市一覧を返す *LineAPIの文字数制限に引っかかるため未使用
+// GetAllCityList 都市一覧を返す *LineAPIの文字数制限に引っかかるため未使用
 func GetAllCityList(cityList *[]string) (err error) {
 	cityInfos := new([]CityInfo)
 
@@ -33,8 +33,8 @@ func GetAllCityList(cityList *[]string) (err error) {
 	return
 }
 
-// 都市情報を取得する
-func GetCityInfo(cityInfo *CityInfo, cityId string) {
+// GetCityInfo 都市情報を取得する
+func GetCityInfo(cityInfo *CityInfo, cityID string) {
 	cityInfos := new([]CityInfo)
 
 	mongo, err := mongoHelper.NewMongo(mongoDial, mongoName)
@@ -43,7 +43,7 @@ func GetCityInfo(cityInfo *CityInfo, cityId string) {
 	if err == nil {
 
 		// DBから都市一覧を取得
-		selector := bson.M{"cityid": cityId}
+		selector := bson.M{"cityid": cityID}
 		if err = mongo.SearchDb(cityInfos, selector, "cityList"); err != nil {
 
 		}
@@ -54,8 +54,8 @@ func GetCityInfo(cityInfo *CityInfo, cityId string) {
 	}
 }
 
-// 都市名から都市IDを抽出する
-func GetCityId(cityName string) (cityId string, err error) {
+// GetCityID 都市名から都市IDを抽出する
+func GetCityID(cityName string) (cityID string, err error) {
 	cityInfos := new([]CityInfo)
 
 	mongo, err := mongoHelper.NewMongo(mongoDial, mongoName)
@@ -70,8 +70,8 @@ func GetCityId(cityName string) (cityId string, err error) {
 	return (*cityInfos)[0].CityID, nil
 }
 
-// 都市IDから都市名を取得
-func GetCityName(cityId string) (cityName string, err error) {
+// GetCityName 都市IDから都市名を取得
+func GetCityName(cityID string) (cityName string, err error) {
 	cityInfos := new([]CityInfo)
 
 	mongo, err := mongoHelper.NewMongo(mongoDial, mongoName)
@@ -79,7 +79,7 @@ func GetCityName(cityId string) (cityName string, err error) {
 
 	if err == nil {
 		// DBから都市一覧を取得 1つだけ取得できる想定
-		selector := bson.M{"cityid": cityId}
+		selector := bson.M{"cityid": cityID}
 		err = mongo.SearchDb(cityInfos, selector, "cityList")
 	}
 

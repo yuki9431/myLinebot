@@ -49,26 +49,26 @@ func convertWeatherToJp(description string) (jpDescription string) {
 }
 
 // 天気情報作成
-func createWeatherMessage(apiIds *ApiIds, userInfo UserInfo) (message string, err error) {
+func createWeatherMessage(apiIDs *APIIDs, userInfo UserInfo) (message string, err error) {
 	// 設定ファイル読み込み
 	config := config.NewConfig(configFile)
-	if err = config.Read(apiIds); err != nil {
+	if err = config.Read(apiIDs); err != nil {
 		err = errors.New("err :faild read config")
 		return
 	}
 
-	cityId := userInfo.CityId
-	appId := apiIds.AppId
+	cityID := userInfo.CityID
+	appID := apiIDs.AppID
 
 	// APIだと英語表記になるのでDBから都市名を取得
-	cityName, err := GetCityName(cityId)
+	cityName, err := GetCityName(cityID)
 	if err != nil {
 		err = errors.New("err : faild get cityName")
 		return
 	}
 
 	// 今日の天気情報を取得　今日の天気情報がない場合は、翌日の天気を取得(0時に近い時を想定)
-	w, err := weather.New(cityId, appId)
+	w, err := weather.New(cityID, appID)
 	w.SetTimezone(time.FixedZone("Asia/Tokyo", 9*60*60))
 	if todayInfo := w.GetInfoFromDate(time.Now()); todayInfo.List != nil {
 		w.Infos = *todayInfo
@@ -104,7 +104,7 @@ func createWeatherMessage(apiIds *ApiIds, userInfo UserInfo) (message string, er
 }
 
 // 天気配信ジョブ
-func sendWeatherInfo(apiIds *ApiIds) (err error) {
+func sendWeatherInfo(apiIDs *APIIDs) (err error) {
 	const layout = "15:04:05" // => hh:mm:ss
 	userinfos := new([]UserInfo)
 	mongo, err := mongoHelper.NewMongo(mongoDial, mongoName)
@@ -120,17 +120,16 @@ func sendWeatherInfo(apiIds *ApiIds) (err error) {
 
 			// 抽出した全ユーザ情報に天気情報を配信
 			for _, userinfo := range *userinfos {
-				if userinfo.CityId != "" {
+				if userinfo.CityID != "" {
 					var bot *linebot.Client
-					if bot, err = linebot.New(apiIds.ChannelSecret, apiIds.ChannelToken); err != nil {
-						// エラー時はその場で終了
-						return
-
-					} else {
+					if bot, err = linebot.New(apiIDs.ChannelSecret, apiIDs.ChannelToken); err == nil {
 						// 天気情報メッセージ送信
 						var message string
-						message, err = createWeatherMessage(apiIds, userinfo)
+						message, err = createWeatherMessage(apiIDs, userinfo)
 						_, err = bot.PushMessage(userinfo.UserID, linebot.NewTextMessage(message)).Do()
+					} else {
+						// error
+						return
 					}
 				} else {
 					err = errors.New("Error: userId取得失敗")
