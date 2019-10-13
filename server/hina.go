@@ -5,7 +5,7 @@ import (
 	"time"
 )
 
-// セリフをランダムに返す
+// HinaResponce セリフをランダムに返す
 func HinaResponce() (replyMessage string) {
 
 	// セリフ一覧

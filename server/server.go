@@ -1,6 +1,7 @@
 package main
 
 import (
+	"flag"
 	"log"
 	"myLinebot/config"
 	"net/http"
@@ -31,21 +32,21 @@ const (
 		"  天気情報取得の所在地を変更する"
 )
 
-// ユーザプロフィール情報
+// UserInfo ユーザプロフィール情報
 type UserInfo struct {
-	UserID        string `json:"userId"`
+	UserID        string `json:"userID"`
 	DisplayName   string `json:"displayName"`
 	PictureURL    string `json:"pictureUrl"`
 	StatusMessage string `json:"statusMessage"`
-	CityId        string `json:"cityId"`
+	CityID        string `json:"cityId"`
 }
 
-// API等の設定
-type ApiIds struct {
+// APIIDs API等の設定
+type APIIDs struct {
 	ChannelSecret string `json:"channelSecret"`
 	ChannelToken  string `json:"channelToken"`
-	AppId         string `json:"appId"`
-	CityId        string `json:"cityId"`
+	AppID         string `json:"appId"`
+	CityID        string `json:"cityId"`
 	CertFile      string `json:"certFile"`
 	KeyFile       string `json:"keyFile"`
 }
@@ -76,23 +77,20 @@ func main() {
 	logger := logger.New(file)
 
 	// 設定ファイル読み込み
-	apiIds := new(ApiIds)
+	apiIDs := new(APIIDs)
 	config := config.NewConfig(configFile)
-	if err := config.Read(apiIds); err != nil {
+	if err := config.Read(apiIDs); err != nil {
 		logger.Fatal(err)
 	}
 
-	// 開始メッセージ
-	logger.Write("start server linebot")
-
 	// 指定時間に天気情報を配信
 	go func() {
-		if err := sendWeatherInfo(apiIds); err != nil {
+		if err := sendWeatherInfo(apiIDs); err != nil {
 			logger.Write(err)
 		}
 	}()
 
-	handler, err := httphandler.New(apiIds.ChannelSecret, apiIds.ChannelToken)
+	handler, err := httphandler.New(apiIDs.ChannelSecret, apiIDs.ChannelToken)
 	if err != nil {
 		logger.Fatal(err)
 	}
@@ -116,18 +114,18 @@ func main() {
 			logger.Write("start event : " + event.Type)
 
 			// ユーザのIDを取得
-			userId := event.Source.UserID
-			logger.Write("userid :" + userId)
+			userID := event.Source.UserID
+			logger.Write("userid :" + userID)
 
 			// 都市IDを取得するため、DBからユーザ情報を獲得
 			userInfos := new([]UserInfo)
-			if err := mongo.SearchDb(userInfos, bson.M{"userid": userId}, "userInfos"); err != nil {
+			if err := mongo.SearchDb(userInfos, bson.M{"userid": userID}, "userInfos"); err != nil {
 				logger.Write("err search userInfo" + err.Error())
 				return
 			}
 
 			// APIからユーザのプロフィールを取得後、レスポンスする
-			if profile, err := bot.GetProfile(userId).Do(); err == nil {
+			if profile, err := bot.GetProfile(userID).Do(); err == nil {
 				if event.Type == linebot.EventTypeMessage {
 					// 返信メッセージ
 					var replyMessage string
@@ -135,7 +133,7 @@ func main() {
 					switch message := event.Message.(type) {
 					case *linebot.TextMessage:
 						if strings.Contains(message.Text, "天気") {
-							if replyMessage, err = createWeatherMessage(apiIds, (*userInfos)[0]); err != nil { // (*userInfos)[0]は一意の値しか取れない想定
+							if replyMessage, err = createWeatherMessage(apiIDs, (*userInfos)[0]); err != nil { // (*userInfos)[0]は一意の値しか取れない想定
 								logger.Write(err)
 							}
 
@@ -149,15 +147,15 @@ func main() {
 							cityName = strings.Replace(cityName, "都市変更:", "", 1)   // 頭の都市変更:を消す
 
 							// 都市IDを取得する
-							cityId, err := GetCityId(cityName)
+							cityID, err := GetCityID(cityName)
 							if err != nil {
 								logger.Write(err)
 							}
 
 							// 都市IDをDBに登録する
-							if cityId != "" {
+							if cityID != "" {
 								selector := bson.M{"userid": profile.UserID}
-								update := bson.M{"$set": bson.M{"cityid": cityId}}
+								update := bson.M{"$set": bson.M{"cityid": cityID}}
 								if err := mongo.UpdateDb(selector, update, "userInfos"); err != nil {
 									replyMessage = "都市の変更に失敗しました..."
 									logger.Write("failed update ciyId")
@@ -198,7 +196,7 @@ func main() {
 					userInfo := new(UserInfo)
 					userInfo.UserID = profile.UserID
 					userInfo.DisplayName = profile.DisplayName
-					userInfo.CityId, _ = GetCityId("東京") //初回登録時には問答無用で東京民や
+					userInfo.CityID, _ = GetCityID("東京") //初回登録時には問答無用で東京民や
 					userInfo.PictureURL = profile.PictureURL
 					userInfo.StatusMessage = profile.StatusMessage
 
@@ -216,7 +214,7 @@ func main() {
 					replyMessages[4] = "都市変更:Brasil"
 
 					for _, replyMessage := range replyMessages {
-						if _, err = bot.PushMessage(userId, linebot.NewTextMessage(replyMessage)).Do(); err != nil {
+						if _, err = bot.PushMessage(userID, linebot.NewTextMessage(replyMessage)).Do(); err != nil {
 							logger.Write(err)
 						}
 					}
@@ -228,11 +226,11 @@ func main() {
 			if event.Type == linebot.EventTypeUnfollow {
 
 				// ユーザ情報をDBから削除
-				selector := bson.M{"userid": userId}
+				selector := bson.M{"userid": userID}
 				if err := mongo.RemoveDb(selector, "userInfos"); err != nil {
 					logger.Write(err)
 				} else {
-					logger.Write("success delete:" + userId)
+					logger.Write("success delete:" + userID)
 				}
 			}
 
@@ -240,13 +238,20 @@ func main() {
 			logger.Write("end event")
 		}
 	})
-	http.Handle("/callback", handler)
-	if err := http.ListenAndServeTLS(":443", apiIds.CertFile, apiIds.KeyFile, nil); err != nil {
-		logger.Fatal("ListenAndServe: ", err)
-	}
 
-	// if err := http.ListenAndServe(":8080", nil); err != nil {
-	// 	logger.Fatal(err)
+	// 使用するポートを取得
+	var addr = flag.String("addr", ":443", "アプリケーションのアドレス")
+	flag.Parse()
+
+	logger.Write("start server linebot port", *addr)
+
+	// http.Handle("/callback", handler)
+	// if err := http.ListenAndServeTLS(*addr, apiIDs.CertFile, apiIDs.KeyFile, nil); err != nil {
+	// 	logger.Fatal("ListenAndServe: ", err)
 	// }
+
+	if err := http.ListenAndServe(":80", nil); err != nil {
+		logger.Fatal(err)
+	}
 
 }
