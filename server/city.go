@@ -2,7 +2,7 @@ package main
 
 import (
 	"github.com/globalsign/mgo/bson"
-	"github.com/yuki9431/mongoHelper"
+	"github.com/yuki9431/mongohelper"
 )
 
 // CityInfo 都市情報
@@ -15,7 +15,7 @@ type CityInfo struct {
 func GetAllCityList(cityList *[]string) (err error) {
 	cityInfos := new([]CityInfo)
 
-	mongo, err := mongoHelper.NewMongo(mongoDial, mongoName)
+	mongo, err := mongohelper.NewMongo(mongoDial, mongoName)
 	if err == nil {
 
 		// DBから都市一覧を取得
@@ -37,7 +37,7 @@ func GetAllCityList(cityList *[]string) (err error) {
 func GetCityInfo(cityInfo *CityInfo, cityID string) {
 	cityInfos := new([]CityInfo)
 
-	mongo, err := mongoHelper.NewMongo(mongoDial, mongoName)
+	mongo, err := mongohelper.NewMongo(mongoDial, mongoName)
 	defer mongo.DisconnectDb()
 
 	if err == nil {
@@ -58,7 +58,7 @@ func GetCityInfo(cityInfo *CityInfo, cityID string) {
 func GetCityID(cityName string) (cityID string, err error) {
 	cityInfos := new([]CityInfo)
 
-	mongo, err := mongoHelper.NewMongo(mongoDial, mongoName)
+	mongo, err := mongohelper.NewMongo(mongoDial, mongoName)
 	defer mongo.DisconnectDb()
 
 	if err == nil {
@@ -74,7 +74,7 @@ func GetCityID(cityName string) (cityID string, err error) {
 func GetCityName(cityID string) (cityName string, err error) {
 	cityInfos := new([]CityInfo)
 
-	mongo, err := mongoHelper.NewMongo(mongoDial, mongoName)
+	mongo, err := mongohelper.NewMongo(mongoDial, mongoName)
 	defer mongo.DisconnectDb()
 
 	if err == nil {

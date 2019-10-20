@@ -8,7 +8,7 @@ import (
 	"time"
 
 	"github.com/line/line-bot-sdk-go/linebot"
-	"github.com/yuki9431/mongoHelper"
+	"github.com/yuki9431/mongohelper"
 	"github.com/yuki9431/weather"
 )
 
@@ -107,7 +107,7 @@ func createWeatherMessage(apiIDs *APIIDs, userInfo UserInfo) (message string, er
 func sendWeatherInfo(apiIDs *APIIDs) (err error) {
 	const layout = "15:04:05" // => hh:mm:ss
 	userinfos := new([]UserInfo)
-	mongo, err := mongoHelper.NewMongo(mongoDial, mongoName)
+	mongo, err := mongohelper.NewMongo(mongoDial, mongoName)
 	defer mongo.DisconnectDb()
 
 	for {
