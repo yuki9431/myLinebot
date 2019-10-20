@@ -3,10 +3,24 @@ package main
 import (
 	"math/rand"
 	"time"
+
+	"github.com/yuki9431/mongohelper"
 )
 
 // HinaResponce セリフをランダムに返す
-func HinaResponce() (replyMessage string) {
+func HinaResponce() (replyMessage string, err error) {
+
+	// TODO DBからランダムでセリフを取得
+	mongo, err := mongohelper.NewMongo(mongoDial, mongoName)
+	defer mongo.DisconnectDb()
+
+	// ドキュメント数を取得し、ランダムでセリフをDB取得する
+	// words, err := mongo.Count("quotes")
+	// if err != nil {
+	// 	return
+	// }
+
+	//mongo.SearchDb
 
 	// セリフ一覧
 	replyMessages := []string{
@@ -24,5 +38,5 @@ func HinaResponce() (replyMessage string) {
 	len := len(replyMessages)
 
 	// メッセージをランダムで返す
-	return replyMessages[rand.Intn(len)]
+	return replyMessages[rand.Intn(len)], nil
 }

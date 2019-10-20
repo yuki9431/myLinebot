@@ -14,7 +14,7 @@ import (
 	"github.com/line/line-bot-sdk-go/linebot"
 	"github.com/line/line-bot-sdk-go/linebot/httphandler"
 	"github.com/yuki9431/logger"
-	"github.com/yuki9431/mongoHelper"
+	"github.com/yuki9431/mongohelper"
 )
 
 const (
@@ -106,7 +106,7 @@ func main() {
 		// イベント処理
 		for _, event := range events {
 			// DB設定
-			mongo, err := mongoHelper.NewMongo(mongoDial, mongoName)
+			mongo, err := mongohelper.NewMongo(mongoDial, mongoName)
 			if err != nil {
 				logger.Fatal(err)
 			}
@@ -183,7 +183,7 @@ func main() {
 							replyMessage = usage
 						} else {
 							// 100%の晴れ女
-							replyMessage = HinaResponce()
+							replyMessage, err = HinaResponce()
 						}
 
 						// 返信処理
@@ -245,13 +245,13 @@ func main() {
 
 	logger.Write("start server linebot port", *addr)
 
-	// http.Handle("/callback", handler)
-	// if err := http.ListenAndServeTLS(*addr, apiIDs.CertFile, apiIDs.KeyFile, nil); err != nil {
-	// 	logger.Fatal("ListenAndServe: ", err)
-	// }
-
-	if err := http.ListenAndServe(":80", nil); err != nil {
-		logger.Fatal(err)
+	http.Handle("/callback", handler)
+	if err := http.ListenAndServeTLS(*addr, apiIDs.CertFile, apiIDs.KeyFile, nil); err != nil {
+		logger.Fatal("ListenAndServe: ", err)
 	}
+
+	// if err := http.ListenAndServe(":80", nil); err != nil {
+	// 	logger.Fatal(err)
+	// }
 
 }
