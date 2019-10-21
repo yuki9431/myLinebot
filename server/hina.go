@@ -10,8 +10,8 @@ func HinaResponce() (replyMessage string, err error) {
 	defer mongo.DisconnectDb()
 
 	// DBからセリフをランダムで取得する 1つだけ取得する想定
-	quoto := new([]string)
-	err = mongo.RandomSearchDb(quoto, nil, "quotos")
+	var quotos []struct{ Quoto string }
+	err = mongo.RandomSearchDb(&quotos, "quotos")
 
-	return (*quoto)[1], err
+	return quotos[0].Quoto, err
 }
