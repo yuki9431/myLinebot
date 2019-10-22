@@ -89,5 +89,11 @@ func GetCityName(cityID string) (cityName string, err error) {
 		err = mongo.SearchDb(cityInfos, selector, "cityList")
 	}
 
-	return (*cityInfos)[0].CityName, err
+	if *cityInfos != nil {
+		cityName = (*cityInfos)[0].CityName
+	} else {
+		cityName = ""
+	}
+
+	return
 }
