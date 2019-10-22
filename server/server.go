@@ -132,6 +132,7 @@ func main() {
 
 					switch message := event.Message.(type) {
 					case *linebot.TextMessage:
+
 						if strings.Contains(message.Text, "天気") {
 							if replyMessage, err = createWeatherMessage(apiIDs, (*userInfos)[0]); err != nil { // (*userInfos)[0]は一意の値しか取れない想定
 								logger.Write(err)
@@ -142,31 +143,34 @@ func main() {
 								logger.Write(err)
 							}
 
-						} else if strings.Contains(message.Text, "都市変更") {
+						} else if strings.Contains(message.Text, "都市変更:") {
 							cityName := strings.Replace(message.Text, " ", "", -1) // 全ての半角スペースを消す
 							cityName = strings.Replace(cityName, "都市変更:", "", 1)   // 頭の都市変更:を消す
 
 							// 都市IDを取得する
 							cityID, err := GetCityID(cityName)
 							if err != nil {
+								logger.Write("error: failed get cityID")
 								logger.Write(err)
 							}
 
 							// 都市IDをDBに登録する
-							if cityID != "" {
+							if cityID != "" && cityName != "" {
+
 								selector := bson.M{"userid": profile.UserID}
 								update := bson.M{"$set": bson.M{"cityid": cityID}}
-								if err := mongo.UpdateDb(selector, update, "userInfos"); err != nil {
-									replyMessage = "都市の変更に失敗しました..."
-									logger.Write("failed update ciyId")
 
-								} else {
+								if err := mongo.UpdateDb(selector, update, "userInfos"); err == nil {
 									replyMessage = "選択された都市に変更しました！"
 									logger.Write("success update ciyId")
+								} else {
+									replyMessage = "都市の変更に失敗しました..."
+									logger.Write("failed update ciyId")
 								}
+
 							} else {
-								replyMessage = "該当都市がな見つかりません💦\n" +
-									"都市一覧と送り頂ければ設定可能な都市が表示されますよ"
+								replyMessage = "該当都市が見つかりません💦\n" +
+									"\"都市一覧\"と送り頂ければ設定可能な都市が表示されますよ"
 							}
 
 						} else if strings.Contains(message.Text, "都市一覧") {
