@@ -63,11 +63,17 @@ func GetCityID(cityName string) (cityID string, err error) {
 
 	if err == nil {
 		// DBから都市一覧を取得 1つだけ取得できる想定
-		selector := bson.M{"cityname": cityName}
+		selector := bson.M{"cityname": bson.M{"$regex": "^" + cityName + ".*"}}
 		err = mongo.SearchDb(cityInfos, selector, "cityList")
 	}
 
-	return (*cityInfos)[0].CityID, nil
+	if *cityInfos != nil {
+		cityID = (*cityInfos)[0].CityID
+	} else {
+		cityID = ""
+	}
+
+	return
 }
 
 // GetCityName 都市IDから都市名を取得
@@ -83,5 +89,5 @@ func GetCityName(cityID string) (cityName string, err error) {
 		err = mongo.SearchDb(cityInfos, selector, "cityList")
 	}
 
-	return (*cityInfos)[0].CityName, nil
+	return (*cityInfos)[0].CityName, err
 }
