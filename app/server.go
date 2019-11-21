@@ -9,7 +9,6 @@ import (
 	"strings"
 
 	"github.com/docopt/docopt-go"
-	"github.com/globalsign/mgo/bson"
 	"github.com/greymd/ojichat/generator"
 	"github.com/line/line-bot-sdk-go/linebot"
 	"github.com/line/line-bot-sdk-go/linebot/httphandler"
@@ -117,13 +116,6 @@ func main() {
 			userID := event.Source.UserID
 			logger.Write("userid :" + userID)
 
-			// 都市IDを取得するため、DBからユーザ情報を獲得
-			userInfos := new([]UserInfo)
-			if err := mongo.SearchDb(userInfos, bson.M{"userid": userID}, "userInfos"); err != nil {
-				logger.Write("err search userInfo" + err.Error())
-				return
-			}
-
 			// APIからユーザのプロフィールを取得後、レスポンスする
 			if profile, err := bot.GetProfile(userID).Do(); err == nil {
 				if event.Type == linebot.EventTypeMessage {
@@ -134,7 +126,7 @@ func main() {
 					case *linebot.TextMessage:
 
 						if IsAskWeather(message.Text) {
-							if replyMessage, err = createWeatherMessage(apiIDs, (*userInfos)[0]); err != nil { // (*userInfos)[0]は一意の値しか取れない想定
+							if replyMessage, err = createWeatherMessage(userID, apiIDs); err != nil {
 								logger.Write(err)
 							}
 
@@ -187,14 +179,7 @@ func main() {
 
 			// ブロック処理時はプロフィールを取得できないので、if文の外に記載
 			if event.Type == linebot.EventTypeUnfollow {
-
-				// ユーザ情報をDBから削除
-				selector := bson.M{"userid": userID}
-				if err := mongo.RemoveDb(selector, "userInfos"); err != nil {
-					logger.Write(err)
-				} else {
-					logger.Write("success delete:" + userID)
-				}
+				UnFollow(userID, logger)
 			}
 
 			mongo.DisconnectDb()
