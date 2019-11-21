@@ -139,7 +139,11 @@ func main() {
 							cityName := strings.Replace(message.Text, " ", "", -1) // 全ての半角スペースを消す
 							cityName = strings.Replace(cityName, "都市変更:", "", 1)   // 頭の都市変更:を消す
 
-							replyMessage = ChangeCity(profile.UserID, cityName, logger)
+							if replyMessage, err = ChangeCity(profile.UserID, cityName); err == nil {
+								logger.Write("success update ciyId")
+							} else {
+								logger.Write("failed update ciyId")
+							}
 
 						} else if IsShowCityList(message.Text) {
 							if replyMessage, err = ShowCityList(); err != nil {
@@ -179,7 +183,12 @@ func main() {
 
 			// ブロック処理時はプロフィールを取得できないので、if文の外に記載
 			if event.Type == linebot.EventTypeUnfollow {
-				UnFollow(userID, logger)
+				if err = UnFollow(userID); err == nil {
+					logger.Write("success delete:" + userID)
+				} else {
+					logger.Write("failed delete:" + userID + err.Error())
+				}
+
 			}
 
 			mongo.DisconnectDb()

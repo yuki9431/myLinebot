@@ -1,8 +1,6 @@
 package main
 
 import (
-	"logger"
-
 	"github.com/globalsign/mgo/bson"
 	"github.com/line/line-bot-sdk-go/linebot"
 	"github.com/yuki9431/mongohelper"
@@ -41,7 +39,7 @@ func Follow(profile *linebot.UserProfileResponse) (replyMessage string, err erro
 }
 
 // UnFollow ユーザがブロックした際の処理
-func UnFollow(userID string, logger logger.Logger) {
+func UnFollow(userID string) (err error) {
 
 	mongo, err := mongohelper.NewMongo(mongoDial, mongoName)
 	if err != nil {
@@ -49,9 +47,6 @@ func UnFollow(userID string, logger logger.Logger) {
 	}
 
 	selector := bson.M{"userid": userID}
-	if err := mongo.RemoveDb(selector, "userInfos"); err != nil {
-		logger.Write(err)
-	} else {
-		logger.Write("success delete:" + userID)
-	}
+	err = mongo.RemoveDb(selector, "userInfos")
+	return
 }

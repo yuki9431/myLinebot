@@ -4,7 +4,6 @@ import (
 	"errors"
 
 	"github.com/globalsign/mgo/bson"
-	"github.com/yuki9431/logger"
 	"github.com/yuki9431/mongohelper"
 )
 
@@ -28,7 +27,7 @@ func ShowCityList() (replyMessage string, err error) {
 }
 
 // ChangeCity ユーザの所在地を変更する
-func ChangeCity(userInfo, cityName string, logger logger.Logger) (replyMessage string) {
+func ChangeCity(userInfo, cityName string) (replyMessage string, err error) {
 
 	mongo, err := mongohelper.NewMongo(mongoDial, mongoName)
 	if err != nil {
@@ -39,7 +38,6 @@ func ChangeCity(userInfo, cityName string, logger logger.Logger) (replyMessage s
 	cityID, err := GetCityID(cityName)
 	if err != nil {
 		err = errors.New("error: failed get cityID")
-		logger.Write(err)
 	}
 
 	// 都市IDをDBに登録する
@@ -50,10 +48,8 @@ func ChangeCity(userInfo, cityName string, logger logger.Logger) (replyMessage s
 
 		if err := mongo.UpdateDb(selector, update, "userInfos"); err == nil {
 			replyMessage = "選択された都市に変更しました！"
-			logger.Write("success update ciyId")
 		} else {
 			replyMessage = "都市の変更に失敗しました..."
-			logger.Write("failed update ciyId" + err.Error())
 		}
 
 	} else {
