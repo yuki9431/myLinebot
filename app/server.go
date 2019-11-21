@@ -133,61 +133,37 @@ func main() {
 					switch message := event.Message.(type) {
 					case *linebot.TextMessage:
 
-						if strings.Contains(message.Text, "天気") {
+						if IsAskWeather(message.Text) {
 							if replyMessage, err = createWeatherMessage(apiIDs, (*userInfos)[0]); err != nil { // (*userInfos)[0]は一意の値しか取れない想定
 								logger.Write(err)
 							}
 
-						} else if strings.Contains(message.Text, "おじさん") || strings.Contains(message.Text, "オジサン") {
+						} else if IsOjichan(message.Text) {
 							if replyMessage, err = ojichat(profile.DisplayName); err != nil {
 								logger.Write(err)
 							}
 
-						} else if strings.Contains(message.Text, "都市変更:") {
+						} else if IsChangeCity(message.Text) {
 							cityName := strings.Replace(message.Text, " ", "", -1) // 全ての半角スペースを消す
 							cityName = strings.Replace(cityName, "都市変更:", "", 1)   // 頭の都市変更:を消す
 
-							// 都市IDを取得する
-							cityID, err := GetCityID(cityName)
-							if err != nil {
-								logger.Write("error: failed get cityID")
+							replyMessage = ChangeCity(profile.UserID, cityName, logger)
+
+						} else if IsShowCityList(message.Text) {
+							if replyMessage, err = ShowCityList(); err != nil {
 								logger.Write(err)
 							}
 
-							// 都市IDをDBに登録する
-							if cityID != "" && cityName != "" {
-
-								selector := bson.M{"userid": profile.UserID}
-								update := bson.M{"$set": bson.M{"cityid": cityID}}
-
-								if err := mongo.UpdateDb(selector, update, "userInfos"); err == nil {
-									replyMessage = "選択された都市に変更しました！"
-									logger.Write("success update ciyId")
-								} else {
-									replyMessage = "都市の変更に失敗しました..."
-									logger.Write("failed update ciyId")
-								}
-
-							} else {
-								replyMessage = "該当都市が見つかりません💦\n" +
-									"\"都市一覧\"と送り頂ければ設定可能な都市が表示されますよ"
-							}
-
-						} else if strings.Contains(message.Text, "都市一覧") {
-							cityList := new([]string)
-							GetAllCityList(cityList)
-
-							replyMessage = "都市一覧\n"
-							for _, city := range *cityList {
-								replyMessage = replyMessage + city + "\n"
-							}
-
-						} else if strings.Contains(message.Text, "ヘルプ") || strings.Contains(message.Text, "help") {
+						} else if IsShowHelp(message.Text) {
 							// botの機能を返信する
 							replyMessage = usage
+
 						} else {
 							// 100%の晴れ女
-							replyMessage, err = HinaResponce()
+							if replyMessage, err = HinaResponce(); err != nil {
+								logger.Write(err)
+							}
+
 						}
 
 						// 返信処理
@@ -196,33 +172,16 @@ func main() {
 						}
 						logger.Write("message.Text: " + message.Text)
 					}
-				} else if event.Type == linebot.EventTypeFollow {
-					userInfo := new(UserInfo)
-					userInfo.UserID = profile.UserID
-					userInfo.DisplayName = profile.DisplayName
-					userInfo.CityID, _ = GetCityID("東京") //初回登録時には問答無用で東京民や
-					userInfo.PictureURL = profile.PictureURL
-					userInfo.StatusMessage = profile.StatusMessage
 
-					// ユーザ情報をDBに登録
-					if err := mongo.InsertDb(userInfo, "userInfos"); err != nil {
+				} else if event.Type == linebot.EventTypeFollow {
+					replyMessage, err := Follow(profile)
+					if err != nil {
 						logger.Write(err)
 					}
 
-					// フレンド登録時の挨拶
-					var replyMessages [5]string
-					replyMessages[0] = profile.DisplayName + "さん\nはじめまして、毎朝6時に天気情報を教えてあげるね"
-					replyMessages[1] = usage
-					replyMessages[2] = "お住まいの都市を変更するには、下記の通りメッセージをお送りください"
-					replyMessages[3] = "都市変更:東京"
-					replyMessages[4] = "都市変更:Brasil"
-
-					for _, replyMessage := range replyMessages {
-						if _, err = bot.PushMessage(userID, linebot.NewTextMessage(replyMessage)).Do(); err != nil {
-							logger.Write(err)
-						}
+					if _, err = bot.PushMessage(userID, linebot.NewTextMessage(replyMessage)).Do(); err != nil {
+						logger.Write(err)
 					}
-
 				}
 			}
 
