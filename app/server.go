@@ -50,21 +50,6 @@ type APIIDs struct {
 	KeyFile       string `json:"keyFile"`
 }
 
-// ojichat実装
-func ojichat(name string) (result string, err error) {
-	parser := &docopt.Parser{
-		OptionsFirst: true,
-	}
-	args, _ := parser.ParseArgs("", nil, "")
-	config := generator.Config{}
-	config.TargetName = name
-	err = args.Bind(&config)
-
-	result, err = generator.Start(config)
-
-	return result, err
-}
-
 func main() {
 	// log出力設定
 	file, err := os.OpenFile(logfile, os.O_RDWR|os.O_CREATE|os.O_APPEND, 0666)
@@ -119,68 +104,21 @@ func main() {
 			// APIからユーザのプロフィールを取得後、レスポンスする
 			if profile, err := bot.GetProfile(userID).Do(); err == nil {
 				if event.Type == linebot.EventTypeMessage {
-					// 返信メッセージ
-					var replyMessage string
-
-					switch message := event.Message.(type) {
-					case *linebot.TextMessage:
-
-						if IsAskWeather(message.Text) {
-							if replyMessage, err = createWeatherMessage(userID, apiIDs); err != nil {
-								logger.Write(err)
-							}
-
-						} else if IsOjichan(message.Text) {
-							if replyMessage, err = ojichat(profile.DisplayName); err != nil {
-								logger.Write(err)
-							}
-
-						} else if IsChangeCity(message.Text) {
-							cityName := strings.Replace(message.Text, " ", "", -1) // 全ての半角スペースを消す
-							cityName = strings.Replace(cityName, "都市変更:", "", 1)   // 頭の都市変更:を消す
-
-							if replyMessage, err = ChangeCity(profile.UserID, cityName); err == nil {
-								logger.Write("success update ciyId")
-							} else {
-								logger.Write("failed update ciyId")
-							}
-
-						} else if IsShowCityList(message.Text) {
-							if replyMessage, err = ShowCityList(); err != nil {
-								logger.Write(err)
-							}
-
-						} else if IsShowHelp(message.Text) {
-							// botの機能を返信する
-							replyMessage = usage
-
-						} else {
-							// 100%の晴れ女
-							if replyMessage, err = HinaResponce(); err != nil {
-								logger.Write(err)
-							}
-
-						}
-
-						// 返信処理
-						if _, err := bot.ReplyMessage(event.ReplyToken, linebot.NewTextMessage(replyMessage)).Do(); err != nil {
-							logger.Write(err)
-						}
-						logger.Write("message.Text: " + message.Text)
-					}
+					replyMessage(event, bot, apiIDs, logger)
 
 				} else if event.Type == linebot.EventTypeFollow {
-					replyMessage, err := Follow(profile)
+					replyMessages, err := Follow(profile)
 					if err != nil {
 						logger.Write(err)
 					}
 
-					if _, err = bot.PushMessage(userID, linebot.NewTextMessage(replyMessage)).Do(); err != nil {
-						logger.Write(err)
+					for _, replyMessage := range replyMessages {
+						if _, err = bot.PushMessage(userID, linebot.NewTextMessage(replyMessage)).Do(); err != nil {
+							logger.Write(err)
+						}
 					}
 				}
 			}
-
 			// ブロック処理時はプロフィールを取得できないので、if文の外に記載
 			if event.Type == linebot.EventTypeUnfollow {
 				if err = UnFollow(userID); err == nil {
@@ -211,4 +149,79 @@ func main() {
 	// 	logger.Fatal(err)
 	// }
 
+}
+
+// 返信メッセージの処理を実装
+func replyMessage(event *linebot.Event, bot *linebot.Client, apiIDs *APIIDs, logger logger.Logger) (replyMessage string, err error) {
+
+	userID := event.Source.UserID
+
+	profile, err := bot.GetProfile(userID).Do()
+	if err != nil {
+		return
+	}
+
+	switch message := event.Message.(type) {
+	case *linebot.TextMessage:
+
+		if IsAskWeather(message.Text) {
+			if replyMessage, err = createWeatherMessage(userID, apiIDs); err != nil {
+				logger.Write(err)
+			}
+
+		} else if IsOjichan(message.Text) {
+			if replyMessage, err = ojichat(profile.DisplayName); err != nil {
+				logger.Write(err)
+			}
+
+		} else if IsChangeCity(message.Text) {
+			cityName := strings.Replace(message.Text, " ", "", -1) // 全ての半角スペースを消す
+			cityName = strings.Replace(cityName, "都市変更:", "", 1)   // 頭の都市変更:を消す
+
+			if replyMessage, err = ChangeCity(profile.UserID, cityName); err == nil {
+				logger.Write("success update ciyId")
+			} else {
+				logger.Write("failed update ciyId")
+			}
+
+		} else if IsShowCityList(message.Text) {
+			if replyMessage, err = ShowCityList(); err != nil {
+				logger.Write(err)
+			}
+
+		} else if IsShowHelp(message.Text) {
+			// botの機能を返信する
+			replyMessage = usage
+
+		} else {
+			// 100%の晴れ女
+			if replyMessage, err = HinaResponce(); err != nil {
+				logger.Write(err)
+			}
+
+		}
+
+		// 返信処理
+		if _, err := bot.ReplyMessage(event.ReplyToken, linebot.NewTextMessage(replyMessage)).Do(); err != nil {
+			logger.Write(err)
+		}
+		logger.Write("message.Text: " + message.Text)
+	}
+
+	return
+}
+
+// ojichat実装
+func ojichat(name string) (result string, err error) {
+	parser := &docopt.Parser{
+		OptionsFirst: true,
+	}
+	args, _ := parser.ParseArgs("", nil, "")
+	config := generator.Config{}
+	config.TargetName = name
+	err = args.Bind(&config)
+
+	result, err = generator.Start(config)
+
+	return result, err
 }
