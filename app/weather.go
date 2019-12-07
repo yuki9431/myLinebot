@@ -7,6 +7,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/globalsign/mgo/bson"
 	"github.com/line/line-bot-sdk-go/linebot"
 	"github.com/yuki9431/mongohelper"
 	"github.com/yuki9431/weather"
@@ -49,7 +50,20 @@ func convertWeatherToJp(description string) (jpDescription string) {
 }
 
 // 天気情報作成
-func createWeatherMessage(apiIDs *APIIDs, userInfo UserInfo) (message string, err error) {
+func createWeatherMessage(userID string, apiIDs *APIIDs) (message string, err error) {
+
+	mongo, err := mongohelper.NewMongo(mongoDial, mongoName)
+	if err != nil {
+		return
+	}
+
+	// 都市IDを取得するため、DBからユーザ情報を獲得
+	userInfos := new([]UserInfo)
+
+	if err = mongo.SearchDb(userInfos, bson.M{"userid": userID}, "userInfos"); err != nil {
+		err = errors.New("err search userInfo" + err.Error())
+	}
+
 	// 設定ファイル読み込み
 	config := config.NewConfig(configFile)
 	if err = config.Read(apiIDs); err != nil {
@@ -57,7 +71,7 @@ func createWeatherMessage(apiIDs *APIIDs, userInfo UserInfo) (message string, er
 		return
 	}
 
-	cityID := userInfo.CityID
+	cityID := (*userInfos)[0].CityID
 	appID := apiIDs.AppID
 
 	// APIだと英語表記になるのでDBから都市名を取得
@@ -125,7 +139,7 @@ func sendWeatherInfo(apiIDs *APIIDs) (err error) {
 					if bot, err = linebot.New(apiIDs.ChannelSecret, apiIDs.ChannelToken); err == nil {
 						// 天気情報メッセージ送信
 						var message string
-						message, err = createWeatherMessage(apiIDs, userinfo)
+						message, err = createWeatherMessage(userinfo.UserID, apiIDs)
 						_, err = bot.PushMessage(userinfo.UserID, linebot.NewTextMessage(message)).Do()
 					} else {
 						// error

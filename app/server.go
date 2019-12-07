@@ -9,7 +9,6 @@ import (
 	"strings"
 
 	"github.com/docopt/docopt-go"
-	"github.com/globalsign/mgo/bson"
 	"github.com/greymd/ojichat/generator"
 	"github.com/line/line-bot-sdk-go/linebot"
 	"github.com/line/line-bot-sdk-go/linebot/httphandler"
@@ -49,21 +48,6 @@ type APIIDs struct {
 	CityID        string `json:"cityId"`
 	CertFile      string `json:"certFile"`
 	KeyFile       string `json:"keyFile"`
-}
-
-// ojichat実装
-func ojichat(name string) (result string, err error) {
-	parser := &docopt.Parser{
-		OptionsFirst: true,
-	}
-	args, _ := parser.ParseArgs("", nil, "")
-	config := generator.Config{}
-	config.TargetName = name
-	err = args.Bind(&config)
-
-	result, err = generator.Start(config)
-
-	return result, err
 }
 
 func main() {
@@ -117,125 +101,32 @@ func main() {
 			userID := event.Source.UserID
 			logger.Write("userid :" + userID)
 
-			// 都市IDを取得するため、DBからユーザ情報を獲得
-			userInfos := new([]UserInfo)
-			if err := mongo.SearchDb(userInfos, bson.M{"userid": userID}, "userInfos"); err != nil {
-				logger.Write("err search userInfo" + err.Error())
-				return
-			}
-
 			// APIからユーザのプロフィールを取得後、レスポンスする
 			if profile, err := bot.GetProfile(userID).Do(); err == nil {
 				if event.Type == linebot.EventTypeMessage {
-					// 返信メッセージ
-					var replyMessage string
+					replyMessage(event, bot, apiIDs, logger)
 
-					switch message := event.Message.(type) {
-					case *linebot.TextMessage:
-
-						if strings.Contains(message.Text, "天気") {
-							if replyMessage, err = createWeatherMessage(apiIDs, (*userInfos)[0]); err != nil { // (*userInfos)[0]は一意の値しか取れない想定
-								logger.Write(err)
-							}
-
-						} else if strings.Contains(message.Text, "おじさん") || strings.Contains(message.Text, "オジサン") {
-							if replyMessage, err = ojichat(profile.DisplayName); err != nil {
-								logger.Write(err)
-							}
-
-						} else if strings.Contains(message.Text, "都市変更:") {
-							cityName := strings.Replace(message.Text, " ", "", -1) // 全ての半角スペースを消す
-							cityName = strings.Replace(cityName, "都市変更:", "", 1)   // 頭の都市変更:を消す
-
-							// 都市IDを取得する
-							cityID, err := GetCityID(cityName)
-							if err != nil {
-								logger.Write("error: failed get cityID")
-								logger.Write(err)
-							}
-
-							// 都市IDをDBに登録する
-							if cityID != "" && cityName != "" {
-
-								selector := bson.M{"userid": profile.UserID}
-								update := bson.M{"$set": bson.M{"cityid": cityID}}
-
-								if err := mongo.UpdateDb(selector, update, "userInfos"); err == nil {
-									replyMessage = "選択された都市に変更しました！"
-									logger.Write("success update ciyId")
-								} else {
-									replyMessage = "都市の変更に失敗しました..."
-									logger.Write("failed update ciyId")
-								}
-
-							} else {
-								replyMessage = "該当都市が見つかりません💦\n" +
-									"\"都市一覧\"と送り頂ければ設定可能な都市が表示されますよ"
-							}
-
-						} else if strings.Contains(message.Text, "都市一覧") {
-							cityList := new([]string)
-							GetAllCityList(cityList)
-
-							replyMessage = "都市一覧\n"
-							for _, city := range *cityList {
-								replyMessage = replyMessage + city + "\n"
-							}
-
-						} else if strings.Contains(message.Text, "ヘルプ") || strings.Contains(message.Text, "help") {
-							// botの機能を返信する
-							replyMessage = usage
-						} else {
-							// 100%の晴れ女
-							replyMessage, err = HinaResponce()
-						}
-
-						// 返信処理
-						if _, err := bot.ReplyMessage(event.ReplyToken, linebot.NewTextMessage(replyMessage)).Do(); err != nil {
-							logger.Write(err)
-						}
-						logger.Write("message.Text: " + message.Text)
-					}
 				} else if event.Type == linebot.EventTypeFollow {
-					userInfo := new(UserInfo)
-					userInfo.UserID = profile.UserID
-					userInfo.DisplayName = profile.DisplayName
-					userInfo.CityID, _ = GetCityID("東京") //初回登録時には問答無用で東京民や
-					userInfo.PictureURL = profile.PictureURL
-					userInfo.StatusMessage = profile.StatusMessage
-
-					// ユーザ情報をDBに登録
-					if err := mongo.InsertDb(userInfo, "userInfos"); err != nil {
+					replyMessages, err := Follow(profile)
+					if err != nil {
 						logger.Write(err)
 					}
-
-					// フレンド登録時の挨拶
-					var replyMessages [5]string
-					replyMessages[0] = profile.DisplayName + "さん\nはじめまして、毎朝6時に天気情報を教えてあげるね"
-					replyMessages[1] = usage
-					replyMessages[2] = "お住まいの都市を変更するには、下記の通りメッセージをお送りください"
-					replyMessages[3] = "都市変更:東京"
-					replyMessages[4] = "都市変更:Brasil"
 
 					for _, replyMessage := range replyMessages {
 						if _, err = bot.PushMessage(userID, linebot.NewTextMessage(replyMessage)).Do(); err != nil {
 							logger.Write(err)
 						}
 					}
-
 				}
 			}
-
 			// ブロック処理時はプロフィールを取得できないので、if文の外に記載
 			if event.Type == linebot.EventTypeUnfollow {
-
-				// ユーザ情報をDBから削除
-				selector := bson.M{"userid": userID}
-				if err := mongo.RemoveDb(selector, "userInfos"); err != nil {
-					logger.Write(err)
-				} else {
+				if err = UnFollow(userID); err == nil {
 					logger.Write("success delete:" + userID)
+				} else {
+					logger.Write("failed delete:" + userID + err.Error())
 				}
+
 			}
 
 			mongo.DisconnectDb()
@@ -258,4 +149,79 @@ func main() {
 	// 	logger.Fatal(err)
 	// }
 
+}
+
+// 返信メッセージの処理を実装
+func replyMessage(event *linebot.Event, bot *linebot.Client, apiIDs *APIIDs, logger logger.Logger) (replyMessage string, err error) {
+
+	userID := event.Source.UserID
+
+	profile, err := bot.GetProfile(userID).Do()
+	if err != nil {
+		return
+	}
+
+	switch message := event.Message.(type) {
+	case *linebot.TextMessage:
+
+		if IsAskWeather(message.Text) {
+			if replyMessage, err = createWeatherMessage(userID, apiIDs); err != nil {
+				logger.Write(err)
+			}
+
+		} else if IsOjichan(message.Text) {
+			if replyMessage, err = ojichat(profile.DisplayName); err != nil {
+				logger.Write(err)
+			}
+
+		} else if IsChangeCity(message.Text) {
+			cityName := strings.Replace(message.Text, " ", "", -1) // 全ての半角スペースを消す
+			cityName = strings.Replace(cityName, "都市変更:", "", 1)   // 頭の都市変更:を消す
+
+			if replyMessage, err = ChangeCity(profile.UserID, cityName); err == nil {
+				logger.Write("success update ciyId")
+			} else {
+				logger.Write("failed update ciyId")
+			}
+
+		} else if IsShowCityList(message.Text) {
+			if replyMessage, err = ShowCityList(); err != nil {
+				logger.Write(err)
+			}
+
+		} else if IsShowHelp(message.Text) {
+			// botの機能を返信する
+			replyMessage = usage
+
+		} else {
+			// 100%の晴れ女
+			if replyMessage, err = HinaResponce(); err != nil {
+				logger.Write(err)
+			}
+
+		}
+
+		// 返信処理
+		if _, err := bot.ReplyMessage(event.ReplyToken, linebot.NewTextMessage(replyMessage)).Do(); err != nil {
+			logger.Write(err)
+		}
+		logger.Write("message.Text: " + message.Text)
+	}
+
+	return
+}
+
+// ojichat実装
+func ojichat(name string) (result string, err error) {
+	parser := &docopt.Parser{
+		OptionsFirst: true,
+	}
+	args, _ := parser.ParseArgs("", nil, "")
+	config := generator.Config{}
+	config.TargetName = name
+	err = args.Bind(&config)
+
+	result, err = generator.Start(config)
+
+	return result, err
 }

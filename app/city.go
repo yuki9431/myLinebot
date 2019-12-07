@@ -1,6 +1,8 @@
 package main
 
 import (
+	"errors"
+
 	"github.com/globalsign/mgo/bson"
 	"github.com/yuki9431/mongohelper"
 )
@@ -11,7 +13,54 @@ type CityInfo struct {
 	CityID   string `json:"cityid"`
 }
 
-// GetAllCityList 都市一覧を返す *LineAPIの文字数制限に引っかかるため未使用
+// ShowCityList 都市一覧を取得しメッセージを返す
+func ShowCityList() (replyMessage string, err error) {
+	cityList := new([]string)
+	err = GetAllCityList(cityList)
+
+	replyMessage = "都市一覧\n"
+	for _, city := range *cityList {
+		replyMessage = replyMessage + city + "\n"
+	}
+
+	return
+}
+
+// ChangeCity ユーザの所在地を変更する
+func ChangeCity(userInfo, cityName string) (replyMessage string, err error) {
+
+	mongo, err := mongohelper.NewMongo(mongoDial, mongoName)
+	if err != nil {
+		return
+	}
+
+	// 都市IDを取得する
+	cityID, err := GetCityID(cityName)
+	if err != nil {
+		err = errors.New("error: failed get cityID")
+	}
+
+	// 都市IDをDBに登録する
+	if cityID != "" && cityName != "" {
+
+		selector := bson.M{"userid": userInfo}
+		update := bson.M{"$set": bson.M{"cityid": cityID}}
+
+		if err := mongo.UpdateDb(selector, update, "userInfos"); err == nil {
+			replyMessage = "選択された都市に変更しました！"
+		} else {
+			replyMessage = "都市の変更に失敗しました..."
+		}
+
+	} else {
+		replyMessage = "該当都市が見つかりません💦\n" +
+			"\"都市一覧\"と送り頂ければ設定可能な都市が表示されますよ"
+	}
+
+	return
+}
+
+// GetAllCityList 都市一覧を返す
 func GetAllCityList(cityList *[]string) (err error) {
 	cityInfos := new([]CityInfo)
 
