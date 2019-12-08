@@ -7,6 +7,7 @@ import (
 	"net/http"
 	"os"
 	"strings"
+	"time"
 
 	"github.com/docopt/docopt-go"
 	"github.com/greymd/ojichat/generator"
@@ -164,8 +165,18 @@ func replyMessage(event *linebot.Event, bot *linebot.Client, apiIDs *APIIDs, log
 	switch message := event.Message.(type) {
 	case *linebot.TextMessage:
 
-		if IsAskWeather(message.Text) {
-			if replyMessage, err = createWeatherMessage(userID, apiIDs); err != nil {
+		if IsAskTomorrowWeather(message.Text) {
+			if replyMessage, err = createWeatherMessage(userID, apiIDs, time.Now().Add(24*time.Hour)); err != nil {
+				logger.Write(err)
+			}
+
+		} else if IsAskWeekWeather(message.Text) {
+			if replyMessage, err = createWeekWeatherMessage(userID, apiIDs); err != nil {
+				logger.Write(err)
+			}
+
+		} else if IsAskWeather(message.Text) {
+			if replyMessage, err = createWeatherMessage(userID, apiIDs, time.Now()); err != nil {
 				logger.Write(err)
 			}
 
