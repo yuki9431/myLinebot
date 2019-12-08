@@ -24,19 +24,19 @@ func convertWeatherToJp(description string) (jpDescription string) {
 			jpDescription = "晴れ"
 
 		case description == "rain":
-			jpDescription = "雨"
+			jpDescription = "雨　"
 
 		case description == "light rain":
 			jpDescription = "小雨"
 
 		case strings.Contains(description, "rain"):
-			jpDescription = "雨"
+			jpDescription = "雨　"
 
 		case strings.Contains(description, "cloud"):
 			jpDescription = "曇り"
 
 		case strings.Contains(description, "snow"):
-			jpDescription = "雪"
+			jpDescription = "雪　"
 
 		case strings.Contains(description, "thunderstorm"):
 			jpDescription = "雷雨"
@@ -50,7 +50,7 @@ func convertWeatherToJp(description string) (jpDescription string) {
 }
 
 // 天気情報作成
-func createWeatherMessage(userID string, apiIDs *APIIDs) (message string, err error) {
+func createWeatherMessage(userID string, apiIDs *APIIDs, target time.Time) (message string, err error) {
 
 	mongo, err := mongohelper.NewMongo(mongoDial, mongoName)
 	if err != nil {
@@ -84,11 +84,11 @@ func createWeatherMessage(userID string, apiIDs *APIIDs) (message string, err er
 	// 今日の天気情報を取得　今日の天気情報がない場合は、翌日の天気を取得(0時に近い時を想定)
 	w, err := weather.New(cityID, appID)
 	w.SetTimezone(time.FixedZone("Asia/Tokyo", 9*60*60))
-	if todayInfo := w.GetInfoFromDate(time.Now()); todayInfo.List != nil {
+	if todayInfo := w.GetInfoFromDate(target); todayInfo.List != nil {
 		w.Infos = *todayInfo
 
 	} else {
-		todayInfo := w.GetInfoFromDate(time.Now().Add(24 * time.Hour))
+		todayInfo := w.GetInfoFromDate(target.Add(24 * time.Hour))
 		w.Infos = *todayInfo
 	}
 	dates := w.GetDates()
@@ -117,7 +117,68 @@ func createWeatherMessage(userID string, apiIDs *APIIDs) (message string, err er
 	return
 }
 
-// 天気配信ジョブ
+// 1週間分の天気情報作成
+func createWeekWeatherMessage(userID string, apiIDs *APIIDs) (message string, err error) {
+
+	mongo, err := mongohelper.NewMongo(mongoDial, mongoName)
+	if err != nil {
+		return
+	}
+
+	// 都市IDを取得するため、DBからユーザ情報を獲得
+	userInfos := new([]UserInfo)
+
+	if err = mongo.SearchDb(userInfos, bson.M{"userid": userID}, "userInfos"); err != nil {
+		err = errors.New("err search userInfo" + err.Error())
+	}
+
+	// 設定ファイル読み込み
+	config := config.NewConfig(configFile)
+	if err = config.Read(apiIDs); err != nil {
+		err = errors.New("err :faild read config")
+		return
+	}
+
+	cityID := (*userInfos)[0].CityID
+	appID := apiIDs.AppID
+
+	// APIだと英語表記になるのでDBから都市名を取得
+	cityName, err := GetCityName(cityID)
+	if err != nil {
+		err = errors.New("err : faild get cityName")
+		return
+	}
+
+	// 天気情報を取得
+	w, err := weather.New(cityID, appID)
+	w.SetTimezone(time.FixedZone("Asia/Tokyo", 9*60*60))
+
+	// 曜日表示の設定
+	wdays := [...]string{"日", "月", "火", "水", "木", "金", "土"}
+
+	message = cityName + "\n" + "1週間の天気情報だよ\n"
+
+	var yesterday time.Time
+	for i, date := range w.GetDates() {
+
+		//日付を跨いだタイミングで改行するし、日付を挿入する
+		if yesterday.Format("2006-01-02") != date.Format("2006-01-02") {
+			message += "\n" + date.Format("01/02 (") + wdays[date.Weekday()] + ")\n"
+		}
+
+		message += date.Format("15:04 ") +
+			convertWeatherToJp(w.GetDescriptions()[i]) +
+			w.ConvertIconToWord(w.GetIcons()[i]) + "  " +
+			strconv.Itoa(w.GetTemps()[i]) + "℃" + "\n"
+
+		// 前日情報と比較するため、前日情報を保持する
+		yesterday = date
+	}
+
+	return
+}
+
+// 朝の天気配信ジョブ
 func sendWeatherInfo(apiIDs *APIIDs) (err error) {
 	const layout = "15:04:05" // => hh:mm:ss
 	userinfos := new([]UserInfo)
@@ -139,7 +200,7 @@ func sendWeatherInfo(apiIDs *APIIDs) (err error) {
 					if bot, err = linebot.New(apiIDs.ChannelSecret, apiIDs.ChannelToken); err == nil {
 						// 天気情報メッセージ送信
 						var message string
-						message, err = createWeatherMessage(userinfo.UserID, apiIDs)
+						message, err = createWeatherMessage(userinfo.UserID, apiIDs, time.Now())
 						_, err = bot.PushMessage(userinfo.UserID, linebot.NewTextMessage(message)).Do()
 					} else {
 						// error
