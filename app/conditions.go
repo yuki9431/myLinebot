@@ -30,6 +30,35 @@ func IsAskWeather(m string) (isAskWeather bool) {
 		"テンキ",
 		"暑い",
 		"寒い",
+		"あつい",
+		"さむい",
+	}
+
+	return contains(m, messages)
+}
+
+// IsAskTomorrowWeather 明日の天気を教えるとき
+func IsAskTomorrowWeather(m string) (isAskTomorrowWeather bool) {
+	messages := []string{
+		"あした",
+		"アシタ",
+		"明日",
+		"翌日",
+		"tomorrow",
+		"Tomorrow",
+	}
+
+	return contains(m, messages)
+}
+
+// IsAskWeekWeather 週の天気を教えるとき
+func IsAskWeekWeather(m string) (isAskTomorrowWeather bool) {
+	messages := []string{
+		"明後日",
+		"あさって",
+		"アサッテ",
+		"未来",
+		"週",
 	}
 
 	return contains(m, messages)
