@@ -64,6 +64,53 @@ func IsAskWeekWeather(m string) (isAskTomorrowWeather bool) {
 	return contains(m, messages)
 }
 
+// IsMorningGreeting 朝の挨拶を返事するとき
+func IsMorningGreeting(m string) (isMorningGreeting bool) {
+	messages := []string{
+		"おはよ",
+		"はろ",
+		"ハロ",
+		"hi",
+		"Hi",
+		"hello",
+		"Hello",
+		"morning",
+		"Morning",
+		"oi",
+		"Oi",
+		"dia",
+		"Dia",
+	}
+
+	return contains(m, messages)
+}
+
+// IsNoonGreeting 朝の挨拶を返事するとき
+func IsNoonGreeting(m string) (isNoonGreeting bool) {
+	messages := []string{
+		"こんにち",
+		"noon",
+		"Noon",
+		"tarde",
+		"Tarde",
+	}
+
+	return contains(m, messages)
+}
+
+// IsNightGreeting 朝の挨拶を返事するとき
+func IsNightGreeting(m string) (isNightGreeting bool) {
+	messages := []string{
+		"こんばん",
+		"night",
+		"Night",
+		"noite",
+		"Noite",
+	}
+
+	return contains(m, messages)
+}
+
 // IsChangeCity 所在地を変更するとき
 func IsChangeCity(m string) (isChangeCity bool) {
 	messages := []string{
