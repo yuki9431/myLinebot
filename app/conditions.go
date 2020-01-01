@@ -64,6 +64,57 @@ func IsAskWeekWeather(m string) (isAskTomorrowWeather bool) {
 	return contains(m, messages)
 }
 
+// IsMorningGreeting 朝の挨拶を返事するとき
+func IsMorningGreeting(m string) (isMorningGreeting bool) {
+	messages := []string{
+		"おはよ",
+		"はろ",
+		"ハロ",
+		"hi",
+		"Hi",
+		"hello",
+		"Hello",
+		"morning",
+		"Morning",
+		"oi",
+		"Oi",
+		"dia",
+		"Dia",
+		"朝",
+	}
+
+	return contains(m, messages)
+}
+
+// IsNoonGreeting 朝の挨拶を返事するとき
+func IsNoonGreeting(m string) (isNoonGreeting bool) {
+	messages := []string{
+		"こんにち",
+		"noon",
+		"Noon",
+		"tarde",
+		"Tarde",
+		"昼",
+	}
+
+	return contains(m, messages)
+}
+
+// IsNightGreeting 朝の挨拶を返事するとき
+func IsNightGreeting(m string) (isNightGreeting bool) {
+	messages := []string{
+		"こんばん",
+		"night",
+		"Night",
+		"noite",
+		"Noite",
+		"おやすみ",
+		"夜",
+	}
+
+	return contains(m, messages)
+}
+
 // IsChangeCity 所在地を変更するとき
 func IsChangeCity(m string) (isChangeCity bool) {
 	messages := []string{
@@ -96,7 +147,7 @@ func IsShowHelp(m string) (isShowCityList bool) {
 	return contains(m, messages)
 }
 
-// Contains 文字列リストと引数の文字列が一致するか判別する
+// 文字列リストと引数の文字列が一致するか判別する
 func contains(s string, strs []string) (isContainable bool) {
 	isContainable = false
 

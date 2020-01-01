@@ -49,8 +49,8 @@ func convertWeatherToJp(description string) (jpDescription string) {
 	return
 }
 
-// 天気情報作成
-func createWeatherMessage(userID string, apiIDs *APIIDs, target time.Time) (message string, err error) {
+// CreateWeatherMessage 天気情報作成
+func CreateWeatherMessage(userID string, apiIDs *APIIDs, target time.Time) (message string, err error) {
 
 	mongo, err := mongohelper.NewMongo(mongoDial, mongoName)
 	if err != nil {
@@ -117,8 +117,8 @@ func createWeatherMessage(userID string, apiIDs *APIIDs, target time.Time) (mess
 	return
 }
 
-// 1週間分の天気情報作成
-func createWeekWeatherMessage(userID string, apiIDs *APIIDs) (message string, err error) {
+// CreateWeekWeatherMessage 1週間分の天気情報作成
+func CreateWeekWeatherMessage(userID string, apiIDs *APIIDs) (message string, err error) {
 
 	mongo, err := mongohelper.NewMongo(mongoDial, mongoName)
 	if err != nil {
@@ -178,8 +178,8 @@ func createWeekWeatherMessage(userID string, apiIDs *APIIDs) (message string, er
 	return
 }
 
-// 朝の天気配信ジョブ
-func sendWeatherInfo(apiIDs *APIIDs) (err error) {
+// SendWeatherInfo 朝の天気配信ジョブ
+func SendWeatherInfo(apiIDs *APIIDs) (err error) {
 	const layout = "15:04:05" // => hh:mm:ss
 	userinfos := new([]UserInfo)
 	mongo, err := mongohelper.NewMongo(mongoDial, mongoName)
@@ -200,7 +200,7 @@ func sendWeatherInfo(apiIDs *APIIDs) (err error) {
 					if bot, err = linebot.New(apiIDs.ChannelSecret, apiIDs.ChannelToken); err == nil {
 						// 天気情報メッセージ送信
 						var message string
-						message, err = createWeatherMessage(userinfo.UserID, apiIDs, time.Now())
+						message, err = CreateWeatherMessage(userinfo.UserID, apiIDs, time.Now())
 						_, err = bot.PushMessage(userinfo.UserID, linebot.NewTextMessage(message)).Do()
 					} else {
 						// error
