@@ -14,8 +14,8 @@ func HinaResponce() (replyMessage string, err error) {
 	return quotos[0].Quoto, err
 }
 
-// morningGreeting 朝の挨拶を返事をDBから取得する
-func morningGreeting() (replyMessage string, err error) {
+// MorningGreeting 朝の挨拶を返事をDBから取得する
+func MorningGreeting() (replyMessage string, err error) {
 	mongo, err := mongohelper.NewMongo(mongoDial, mongoName)
 	defer mongo.DisconnectDb()
 
@@ -26,8 +26,8 @@ func morningGreeting() (replyMessage string, err error) {
 	return quotos[0].Quoto, err
 }
 
-// noonGreeting 昼の挨拶を返事をDBから取得する
-func noonGreeting() (replyMessage string, err error) {
+// NoonGreeting 昼の挨拶を返事をDBから取得する
+func NoonGreeting() (replyMessage string, err error) {
 	mongo, err := mongohelper.NewMongo(mongoDial, mongoName)
 	defer mongo.DisconnectDb()
 
@@ -38,8 +38,8 @@ func noonGreeting() (replyMessage string, err error) {
 	return quotos[0].Quoto, err
 }
 
-// nightGreeting 夜の挨拶を返事をDBから取得する
-func nightGreeting() (replyMessage string, err error) {
+// NightGreeting 夜の挨拶を返事をDBから取得する
+func NightGreeting() (replyMessage string, err error) {
 	mongo, err := mongohelper.NewMongo(mongoDial, mongoName)
 	defer mongo.DisconnectDb()
 

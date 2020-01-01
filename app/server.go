@@ -70,7 +70,7 @@ func main() {
 
 	// 指定時間に天気情報を配信
 	go func() {
-		if err := sendWeatherInfo(apiIDs); err != nil {
+		if err := SendWeatherInfo(apiIDs); err != nil {
 			logger.Write(err)
 		}
 	}()
@@ -166,32 +166,32 @@ func replyMessage(event *linebot.Event, bot *linebot.Client, apiIDs *APIIDs, log
 	case *linebot.TextMessage:
 
 		if IsAskTomorrowWeather(message.Text) {
-			if replyMessage, err = createWeatherMessage(userID, apiIDs, time.Now().Add(24*time.Hour)); err != nil {
+			if replyMessage, err = CreateWeatherMessage(userID, apiIDs, time.Now().Add(24*time.Hour)); err != nil {
 				logger.Write(err)
 			}
 
 		} else if IsAskWeekWeather(message.Text) {
-			if replyMessage, err = createWeekWeatherMessage(userID, apiIDs); err != nil {
+			if replyMessage, err = CreateWeekWeatherMessage(userID, apiIDs); err != nil {
 				logger.Write(err)
 			}
 
 		} else if IsAskWeather(message.Text) {
-			if replyMessage, err = createWeatherMessage(userID, apiIDs, time.Now()); err != nil {
+			if replyMessage, err = CreateWeatherMessage(userID, apiIDs, time.Now()); err != nil {
 				logger.Write(err)
 			}
 
 		} else if IsMorningGreeting(message.Text) {
-			if replyMessage, err = morningGreeting(); err != nil {
+			if replyMessage, err = MorningGreeting(); err != nil {
 				logger.Write(err)
 			}
 
 		} else if IsNoonGreeting(message.Text) {
-			if replyMessage, err = noonGreeting(); err != nil {
+			if replyMessage, err = NoonGreeting(); err != nil {
 				logger.Write(err)
 			}
 
 		} else if IsNightGreeting(message.Text) {
-			if replyMessage, err = nightGreeting(); err != nil {
+			if replyMessage, err = NightGreeting(); err != nil {
 				logger.Write(err)
 			}
 

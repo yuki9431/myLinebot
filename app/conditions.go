@@ -143,7 +143,7 @@ func IsShowHelp(m string) (isShowCityList bool) {
 	return contains(m, messages)
 }
 
-// Contains 文字列リストと引数の文字列が一致するか判別する
+// 文字列リストと引数の文字列が一致するか判別する
 func contains(s string, strs []string) (isContainable bool) {
 	isContainable = false
 
