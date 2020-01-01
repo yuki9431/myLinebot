@@ -180,6 +180,21 @@ func replyMessage(event *linebot.Event, bot *linebot.Client, apiIDs *APIIDs, log
 				logger.Write(err)
 			}
 
+		} else if IsMorningGreeting(message.Text) {
+			if replyMessage, err = morningGreeting(); err != nil {
+				logger.Write(err)
+			}
+
+		} else if IsNoonGreeting(message.Text) {
+			if replyMessage, err = noonGreeting(); err != nil {
+				logger.Write(err)
+			}
+
+		} else if IsNightGreeting(message.Text) {
+			if replyMessage, err = nightGreeting(); err != nil {
+				logger.Write(err)
+			}
+
 		} else if IsOjichan(message.Text) {
 			if replyMessage, err = ojichat(profile.DisplayName); err != nil {
 				logger.Write(err)
