@@ -80,6 +80,7 @@ func IsMorningGreeting(m string) (isMorningGreeting bool) {
 		"Oi",
 		"dia",
 		"Dia",
+		"朝",
 	}
 
 	return contains(m, messages)
@@ -93,6 +94,7 @@ func IsNoonGreeting(m string) (isNoonGreeting bool) {
 		"Noon",
 		"tarde",
 		"Tarde",
+		"昼",
 	}
 
 	return contains(m, messages)
@@ -106,6 +108,8 @@ func IsNightGreeting(m string) (isNightGreeting bool) {
 		"Night",
 		"noite",
 		"Noite",
+		"おやすみ",
+		"夜",
 	}
 
 	return contains(m, messages)
