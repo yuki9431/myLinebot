@@ -1,7 +1,7 @@
 mongohelper
 ====
 ## Overview
-- Go言語用のmongoDBDBドライバ [mgo](https://github.com/go-mgo/mgo)を自分が使いやすいようにカスタマイズ
+- Go言語用のmongoDBドライバ [mgo](https://github.com/go-mgo/mgo)を自分が使いやすいようにカスタマイズ
 
 ## Descriptionz
 挿入、抽出、削除を関数一つで実行できる  
