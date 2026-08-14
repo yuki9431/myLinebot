@@ -1,6 +1,6 @@
 package main
 
-import "github.com/yuki9431/mongohelper"
+import "github.com/yuki9431/myLinebot/internal/mongohelper"
 
 // HinaResponce セリフをランダムに返す
 func HinaResponce() (replyMessage string, err error) {

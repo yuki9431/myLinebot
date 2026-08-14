@@ -4,7 +4,7 @@ import (
 	"errors"
 
 	"github.com/globalsign/mgo/bson"
-	"github.com/yuki9431/mongohelper"
+	"github.com/yuki9431/myLinebot/internal/mongohelper"
 )
 
 // CityInfo 都市情報

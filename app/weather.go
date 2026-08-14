@@ -2,15 +2,15 @@ package main
 
 import (
 	"errors"
-	"myLinebot/config"
+	"github.com/yuki9431/myLinebot/config"
 	"strconv"
 	"strings"
 	"time"
 
 	"github.com/globalsign/mgo/bson"
 	"github.com/line/line-bot-sdk-go/linebot"
-	"github.com/yuki9431/mongohelper"
-	"github.com/yuki9431/weather"
+	"github.com/yuki9431/myLinebot/internal/mongohelper"
+	"github.com/yuki9431/myLinebot/internal/weather"
 )
 
 // 天気情報を日本語に変換

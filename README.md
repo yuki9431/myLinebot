@@ -13,9 +13,11 @@
 - 返信イベントは[ojichat](https://github.com/greymd/ojichat)搭載
 
 ## Requirement
-- Go 1.10 or later
-- github.com/yuki9431/weather
-- github.com/greymd/ojichat
+- Go 1.25 or later
+- MongoDB
+
+以前は `github.com/yuki9431/logger` / `mongohelper` / `weather` を外部リポジトリとして
+参照していたが、`internal/` 配下に取り込んだため個別の取得は不要になった。
 
 ## Contribution
 1. Fork ([https://github.com/yuki9431/myLinebot](https://github.com/yuki9431/myLinebot))

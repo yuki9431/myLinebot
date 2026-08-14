@@ -2,8 +2,8 @@ package main
 
 import (
 	"flag"
+	"github.com/yuki9431/myLinebot/config"
 	"log"
-	"myLinebot/config"
 	"net/http"
 	"os"
 	"strings"
@@ -13,8 +13,8 @@ import (
 	"github.com/greymd/ojichat/generator"
 	"github.com/line/line-bot-sdk-go/linebot"
 	"github.com/line/line-bot-sdk-go/linebot/httphandler"
-	"github.com/yuki9431/logger"
-	"github.com/yuki9431/mongohelper"
+	"github.com/yuki9431/myLinebot/internal/logger"
+	"github.com/yuki9431/myLinebot/internal/mongohelper"
 )
 
 const (
