@@ -3,10 +3,10 @@ package main
 import (
 	"errors"
 	"flag"
-	"myLinebot/config"
+	"github.com/yuki9431/myLinebot/config"
+	"github.com/yuki9431/myLinebot/internal/logger"
+	"github.com/yuki9431/myLinebot/internal/mongohelper"
 	"log"
-	"logger"
-	"mongoHelper"
 	"os"
 
 	"github.com/line/line-bot-sdk-go/linebot"
@@ -56,7 +56,7 @@ func main() {
 	}
 
 	// DB設定
-	mongo, err := mongoHelper.NewMongo(mongoDial, mongoName)
+	mongo, err := mongohelper.NewMongo(mongoDial, mongoName)
 	if err != nil {
 		logger.Fatal(err)
 	}

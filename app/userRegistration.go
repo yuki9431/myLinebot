@@ -3,7 +3,7 @@ package main
 import (
 	"github.com/globalsign/mgo/bson"
 	"github.com/line/line-bot-sdk-go/linebot"
-	"github.com/yuki9431/mongohelper"
+	"github.com/yuki9431/myLinebot/internal/mongohelper"
 )
 
 // Follow ユーザがフォローした際の処理
