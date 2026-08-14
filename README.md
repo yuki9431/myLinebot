@@ -86,4 +86,4 @@ if err := mongo.UpdateDb(selector, update, "userInfos"); err != nil {
 
 
 ## Author
-[Dillen H. Tomida](https://twitter.com/t0mihir0)
+[Dillen H. Tomida](https://github.com/yuki9431)
