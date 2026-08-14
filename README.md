@@ -95,4 +95,4 @@ New()で取得した天気情報に含まれる気温を取得します。
 
 
 ## Author
-[Dillen H. Tomida](https://twitter.com/t0mihir0)
+[Dillen H. Tomida](https://github.com/yuki9431)
